@@ -57,32 +57,31 @@ const HEAP_PROFILES = [
   { id: "maxheap", label: "Max Heap", factor: 1.4, desc: "Overloaded" },
 ];
 
-// ─── STORAGE HELPERS ──────────────────────────────────
-async function loadHistory() {
+// ─── STORAGE HELPERS (localStorage) ──────────────────
+function loadHistory(): any[] {
   try {
-    const result = await window.storage.get("loadweigh_history");
-    return result ? JSON.parse(result.value) : [];
+    const data = localStorage.getItem("truckload_history");
+    return data ? JSON.parse(data) : [];
   } catch { return []; }
 }
-async function saveEstimate(entry) {
+
+function saveEstimate(entry: any) {
   try {
-    const history = await loadHistory();
+    const history = loadHistory();
     history.push({ ...entry, ts: Date.now() });
-    // Keep last 100
-    const trimmed = history.slice(-100);
-    await window.storage.set("loadweigh_history", JSON.stringify(trimmed));
+    localStorage.setItem("truckload_history", JSON.stringify(history.slice(-100)));
   } catch (e) { console.error("Storage save error:", e); }
 }
-async function getSuggestion(truckId, materialId) {
+
+function getSuggestion(truckId: any, materialId: any) {
   try {
-    const history = await loadHistory();
-    const matches = history.filter(h => h.truckId === truckId && h.materialId === materialId);
+    const history = loadHistory();
+    const matches = history.filter((h: any) => h.truckId === truckId && h.materialId === materialId);
     if (matches.length < 3) return null;
-    const avgFill = Math.round(matches.reduce((s, m) => s + m.fillPct, 0) / matches.length);
-    // Most common heap profile
-    const heapCounts = {};
-    matches.forEach(m => { heapCounts[m.heapId] = (heapCounts[m.heapId] || 0) + 1; });
-    const topHeap = Object.entries(heapCounts).sort((a, b) => b[1] - a[1])[0][0];
+    const avgFill = Math.round(matches.reduce((s: number, m: any) => s + m.fillPct, 0) / matches.length);
+    const heapCounts: any = {};
+    matches.forEach((m: any) => { heapCounts[m.heapId] = (heapCounts[m.heapId] || 0) + 1; });
+    const topHeap = Object.entries(heapCounts).sort((a: any, b: any) => b[1] - a[1])[0][0];
     return { fillPct: avgFill, heapId: topHeap, count: matches.length };
   } catch { return null; }
 }
@@ -90,44 +89,36 @@ async function getSuggestion(truckId, materialId) {
 // ─── MAIN COMPONENT ──────────────────────────────────
 export default function LoadWeighV1() {
   const [step, setStep] = useState(0);
-  // Step 0: Truck
   const [truckIdx, setTruckIdx] = useState(0);
   const [bedShape, setBedShape] = useState("rectangular");
   const [dims, setDims] = useState({ length: 0, topWidth: 0, bottomWidth: 0, depth: 0 });
-  // Step 1: Material
-  const [materialIdx, setMaterialIdx] = useState(null);
+  const [materialIdx, setMaterialIdx] = useState<number | null>(null);
   const [materialFilter, setMaterialFilter] = useState("All");
-  // Step 2: Moisture
   const [moistureIdx, setMoistureIdx] = useState(0);
-  // Step 3: Fill + Heap
   const [fillPct, setFillPct] = useState(85);
   const [heapIdx, setHeapIdx] = useState(1);
-  const [photo, setPhoto] = useState(null);
+  const [photo, setPhoto] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [suggestion, setSuggestion] = useState(null);
+  const [suggestion, setSuggestion] = useState<any>(null);
   const [saved, setSaved] = useState(false);
   const [historyCount, setHistoryCount] = useState(0);
 
-  const fileRef = useRef(null);
-  const photoContainerRef = useRef(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const photoContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load suggestion when truck+material are set
   useEffect(() => {
     if (truckIdx > 0 && materialIdx !== null) {
       const truck = TRUCK_PROFILES[truckIdx];
       const mat = MATERIALS[materialIdx];
-      getSuggestion(truck.id, mat.id).then(s => {
-        setSuggestion(s);
-      });
+      setSuggestion(getSuggestion(truck.id, mat.id));
     }
   }, [truckIdx, materialIdx]);
 
-  // Load history count on mount
   useEffect(() => {
-    loadHistory().then(h => setHistoryCount(h.length));
+    setHistoryCount(loadHistory().length);
   }, []);
 
-  const handleTruckSelect = (idx) => {
+  const handleTruckSelect = (idx: number) => {
     setTruckIdx(idx);
     const t = TRUCK_PROFILES[idx];
     if (idx > 0) {
@@ -136,17 +127,16 @@ export default function LoadWeighV1() {
     }
   };
 
-  const handlePhoto = (e) => {
+  const handlePhoto = (e: any) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (ev) => setPhoto(ev.target.result);
+      reader.onload = (ev: any) => setPhoto(ev.target.result);
       reader.readAsDataURL(file);
     }
   };
 
-  // Draggable fill line on photo
-  const handleDrag = useCallback((clientY) => {
+  const handleDrag = useCallback((clientY: number) => {
     const container = photoContainerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -155,15 +145,14 @@ export default function LoadWeighV1() {
     setFillPct(pct);
   }, []);
 
-  const onPointerDown = (e) => { setDragging(true); handleDrag(e.clientY); };
-  const onPointerMove = (e) => { if (dragging) handleDrag(e.clientY); };
+  const onPointerDown = (e: any) => { setDragging(true); handleDrag(e.clientY); };
+  const onPointerMove = (e: any) => { if (dragging) handleDrag(e.clientY); };
   const onPointerUp = () => setDragging(false);
 
-  // ─── CALCULATIONS ──────────────────────────────────
   const calcVolume = () => {
     const { length: l, topWidth: tw, bottomWidth: bw, depth: d } = dims;
     if (bedShape === "trapezoid") {
-      return (l * ((tw + bw) / 2) * d) / 27; // yd³
+      return (l * ((tw + bw) / 2) * d) / 27;
     }
     return (l * tw * d) / 27;
   };
@@ -178,9 +167,9 @@ export default function LoadWeighV1() {
   const rangeLow = estimatedWeight * 0.85;
   const rangeHigh = estimatedWeight * 1.15;
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (materialIdx === null || saved) return;
-    await saveEstimate({
+    saveEstimate({
       truckId: TRUCK_PROFILES[truckIdx].id,
       materialId: MATERIALS[materialIdx].id,
       fillPct,
@@ -336,7 +325,6 @@ export default function LoadWeighV1() {
 
       <div style={{ padding:"16px 20px 120px" }}>
 
-        {/* ═══════ STEP 0: TRUCK ═══════ */}
         {step === 0 && (
           <div className="fade">
             <div className="label">Select Truck Profile</div>
@@ -353,7 +341,6 @@ export default function LoadWeighV1() {
               ))}
             </div>
 
-            {/* Bed Shape */}
             <div className="card">
               <div className="label">Bed Shape</div>
               <div style={{ display:"flex", gap:8 }}>
@@ -364,8 +351,6 @@ export default function LoadWeighV1() {
                   </button>
                 ))}
               </div>
-
-              {/* Shape diagram */}
               <svg viewBox="0 0 200 70" style={{ width:"100%", height:55, marginTop:10 }}>
                 {bedShape === "rectangular" ? (
                   <rect x="30" y="10" width="140" height="50" rx="2" fill="none"
@@ -380,7 +365,6 @@ export default function LoadWeighV1() {
               </svg>
             </div>
 
-            {/* Dimensions */}
             <div className="card">
               <div className="label">Bed Dimensions (feet) — from Apple Measure App</div>
               <div style={{ display:"grid", gridTemplateColumns: bedShape === "trapezoid" ? "1fr 1fr" : "1fr 1fr 1fr", gap:10, marginTop:4 }}>
@@ -416,7 +400,6 @@ export default function LoadWeighV1() {
                     placeholder="0" />
                 </div>
               </div>
-
               <div style={{ marginTop:14, display:"flex", justifyContent:"space-between", fontSize:13 }}>
                 <span style={{ color:"var(--dim)" }}>Bed Volume</span>
                 <span style={{ color:"var(--amber)", fontWeight:700, fontFamily:"'Outfit',sans-serif", fontSize:16 }}>
@@ -430,14 +413,11 @@ export default function LoadWeighV1() {
               )}
             </div>
 
-            {/* Truck side view */}
             <div className="card" style={{ padding:8 }}>
               <svg viewBox="0 0 320 90" style={{ width:"100%", height:75 }}>
-                {/* cab */}
                 <rect x="15" y="38" width="45" height="35" rx="4" fill="var(--s2)" stroke="var(--border)" strokeWidth="1.5" />
                 <rect x="20" y="42" width="18" height="14" rx="2" fill="var(--s3)" opacity=".5" />
                 <text x="30" y="66" fill="var(--dim)" fontSize="7" fontFamily="monospace" textAnchor="middle">CAB</text>
-                {/* bed */}
                 {bedShape === "rectangular" ? (
                   <rect x="65" y="18" width={Math.min(220, Math.max(60, dims.length*12))}
                     height={Math.min(55, Math.max(20, dims.depth*14))}
@@ -450,11 +430,9 @@ export default function LoadWeighV1() {
                     ${65 + Math.min(220, Math.max(60, dims.length*12)) - Math.min(55, Math.max(20, dims.depth*14)) * 0.15},${18 + Math.min(55, Math.max(20, dims.depth*14))}
                   `} fill="none" stroke="var(--amber)" strokeWidth="2" strokeDasharray="5 3" />
                 )}
-                {/* wheels */}
                 <circle cx="50" cy="78" r="8" fill="var(--s2)" stroke="var(--border)" strokeWidth="2" />
                 <circle cx={65 + Math.min(220, Math.max(60, dims.length*12)) - 25} cy="78" r="8" fill="var(--s2)" stroke="var(--border)" strokeWidth="2" />
                 <circle cx={65 + Math.min(220, Math.max(60, dims.length*12)) - 45} cy="78" r="8" fill="var(--s2)" stroke="var(--border)" strokeWidth="2" />
-                {/* dims label */}
                 <text x={65 + Math.min(220, Math.max(60, dims.length*12))/2}
                   y={18 + Math.min(55, Math.max(20, dims.depth*14))/2 + 3}
                   textAnchor="middle" fill="var(--amber)" fontSize="9" fontFamily="monospace" opacity=".7">
@@ -469,7 +447,6 @@ export default function LoadWeighV1() {
           </div>
         )}
 
-        {/* ═══════ STEP 1: MATERIAL ═══════ */}
         {step === 1 && (
           <div className="fade">
             <div className="label">Material Type</div>
@@ -495,7 +472,6 @@ export default function LoadWeighV1() {
                 );
               })}
             </div>
-
             <div style={{ display:"flex", gap:8, marginTop:16 }}>
               <button className="btn-ghost" onClick={() => setStep(0)}>← Back</button>
               <button className="btn" style={{ flex:1 }} onClick={() => setStep(2)} disabled={!canProceed[1]}>
@@ -505,7 +481,6 @@ export default function LoadWeighV1() {
           </div>
         )}
 
-        {/* ═══════ STEP 2: MOISTURE ═══════ */}
         {step === 2 && (
           <div className="fade">
             <div className="label">Moisture Condition</div>
@@ -523,7 +498,6 @@ export default function LoadWeighV1() {
                 </button>
               ))}
             </div>
-
             <div style={{ display:"flex", gap:8, marginTop:16 }}>
               <button className="btn-ghost" onClick={() => setStep(1)}>← Back</button>
               <button className="btn" style={{ flex:1 }} onClick={() => setStep(3)}>
@@ -533,10 +507,8 @@ export default function LoadWeighV1() {
           </div>
         )}
 
-        {/* ═══════ STEP 3: FILL + HEAP ═══════ */}
         {step === 3 && (
           <div className="fade">
-            {/* Suggestion bar */}
             {suggestion && (
               <div className="suggestion-bar" onClick={applySuggestion} style={{ boxShadow:"none", animation:"none" }}>
                 <div>
@@ -549,7 +521,6 @@ export default function LoadWeighV1() {
               </div>
             )}
 
-            {/* Photo capture with draggable fill line */}
             <div className="card">
               <div className="label">Reference Photo — drag line to fill level</div>
               {photo ? (
@@ -558,10 +529,8 @@ export default function LoadWeighV1() {
                   onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
                   style={{ height:240 }}>
                   <img src={photo} alt="Load" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-                  {/* Fill overlay */}
                   <div className="fill-overlay"
                     style={{ height:`${fillPct}%`, background: mat?.color || "var(--amber)" }} />
-                  {/* Draggable line */}
                   <div className="fill-line" style={{ bottom:`${fillPct}%` }} />
                   <div className="fill-label" style={{ bottom:`${fillPct}%` }}>{fillPct}%</div>
                   <button onClick={() => setPhoto(null)} style={{
@@ -587,7 +556,6 @@ export default function LoadWeighV1() {
                 onChange={handlePhoto} style={{ display:"none" }} />
             </div>
 
-            {/* Fill slider (always visible) */}
             <div className="card">
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                 <div className="label" style={{ margin:0 }}>Fill Level</div>
@@ -598,8 +566,6 @@ export default function LoadWeighV1() {
               <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:"var(--dim)", marginTop:4, letterSpacing:.5 }}>
                 <span>10% QUARTER</span><span>50% HALF</span><span>75% ¾</span><span>100% FULL</span>
               </div>
-
-              {/* Fill viz */}
               <svg viewBox="0 0 220 55" style={{ width:"100%", height:45, marginTop:8 }}>
                 {bedShape === "trapezoid" ? (
                   <>
@@ -624,7 +590,6 @@ export default function LoadWeighV1() {
               </svg>
             </div>
 
-            {/* Heap Profile */}
             <div className="card">
               <div className="label">Heap Profile</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
@@ -648,10 +613,8 @@ export default function LoadWeighV1() {
           </div>
         )}
 
-        {/* ═══════ STEP 4: RESULT ═══════ */}
         {step === 4 && mat && (
           <div className="fade">
-            {/* Hero result */}
             <div className="card" style={{
               textAlign:"center", borderColor:"var(--amber)", padding:28,
               background:"linear-gradient(180deg, #1a1608 0%, var(--s1) 100%)",
@@ -672,13 +635,11 @@ export default function LoadWeighV1() {
               </div>
             </div>
 
-            {/* Save for learning */}
             <button className={saved ? "btn-ghost" : "btn"} onClick={handleSave} disabled={saved}
               style={{ marginBottom:12, ...(saved ? {width:"100%", borderColor:"var(--green)", color:"var(--green)"} : {}) }}>
               {saved ? "✓ Saved — improving future suggestions" : "💾 Save Estimate (Improves Suggestions)"}
             </button>
 
-            {/* Breakdown */}
             <div className="card">
               <div className="label">Calculation Breakdown</div>
               {[
@@ -707,7 +668,6 @@ export default function LoadWeighV1() {
               </div>
             </div>
 
-            {/* Conversions */}
             <div className="card">
               <div className="label">Conversions</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
@@ -746,7 +706,6 @@ export default function LoadWeighV1() {
         )}
       </div>
 
-      {/* Footer */}
       <div style={{
         position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)",
         width:"100%", maxWidth:500, padding:"10px 20px 6px",
