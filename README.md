@@ -1,73 +1,44 @@
-# React + TypeScript + Vite
+# TruckLoad — Truck Load Weight Estimator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A mobile-friendly web app that estimates the weight of earth materials loaded in dump trucks using manual measurements and material density data.
 
-Currently, two official plugins are available:
+## Live App
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+🔗 [joshitmohanty.com/truckload-app](https://joshitmohanty.com/truckload-app/)
 
-## React Compiler
+## How It Works
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Select Truck** — Pick from 14 preset profiles (common VA Beach/Hampton Roads trucks) or enter custom dimensions from iPhone's Measure app (LiDAR)
+2. **Select Material** — 23 earth materials with real-world bulk densities (stone, soil, sand, mulch, gravel, recycled)
+3. **Set Moisture** — Dry / Damp / Wet adjustment factors
+4. **Estimate Fill Level** — Drag a fill line on a photo of the loaded truck, or use the manual slider. Select heap profile (flat, crowned, heaped, max)
+5. **Get Result** — Estimated weight in tons with ±15% confidence range, full calculation breakdown, and unit conversions
 
-## Expanding the ESLint configuration
+## Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Trapezoid bed geometry** — Accounts for angled dump truck walls (top wider than bottom)
+- **Photo fill-line tool** — Snap a photo, drag a line to the material surface for intuitive fill estimation
+- **Learning system** — Saves estimates in localStorage; after 3+ estimates with the same truck+material combo, suggests fill level and heap profile
+- **Mobile-first design** — Built for field use on smartphones
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Formula
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+Effective Volume = Bed Volume × Fill% × Heap Factor
+Adjusted Density = Base Density × Moisture Factor
+Estimated Weight = Effective Volume × Adjusted Density
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Bed volume uses trapezoidal prism formula: `L × ((TopWidth + BottomWidth) / 2) × Depth`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Tech Stack
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+React + TypeScript + Vite, deployed via GitHub Pages with GitHub Actions.
+
+## Accuracy
+
+±10–15% with correct material selection and fill estimation. Not for legal billing or certified weighing — use a certified scale for official weights.
+
+## License
+
+MIT
