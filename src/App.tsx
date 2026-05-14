@@ -11,7 +11,7 @@ interface TruckMfg {
 }
 
 const TRUCK_MANUFACTURERS: TruckMfg[] = [
-  { id: "ford", name: "Ford", logo: "https://logo.clearbit.com/ford.com", models: [
+  { id: "ford", name: "Ford", logo: "#003478", models: [
     { id: "f350", name: "F-350 Dump", shape: "rectangular", length: 8, topWidth: 7, bottomWidth: 7, depth: 2, capacity: "3-4 yd³", axle: "Single" },
     { id: "f450", name: "F-450 Dump", shape: "rectangular", length: 9, topWidth: 7, bottomWidth: 7, depth: 2.2, capacity: "4-5 yd³", axle: "Single" },
     { id: "f550", name: "F-550 Dump", shape: "rectangular", length: 10, topWidth: 7, bottomWidth: 7, depth: 2.5, capacity: "5-6 yd³", axle: "Single" },
@@ -19,19 +19,19 @@ const TRUCK_MANUFACTURERS: TruckMfg[] = [
     { id: "f650", name: "F-650 Dump", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.8, capacity: "6-8 yd³", axle: "Single" },
     { id: "f750", name: "F-750 Dump", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 3, capacity: "8-10 yd³", axle: "Single" },
   ]},
-  { id: "chevy", name: "Chevrolet / GMC", logo: "https://logo.clearbit.com/chevrolet.com", models: [
+  { id: "chevy", name: "Chevrolet / GMC", logo: "#D1A827", models: [
     { id: "silv3500", name: "Silverado/Sierra 3500HD", shape: "rectangular", length: 8, topWidth: 7, bottomWidth: 7, depth: 2, capacity: "3-4 yd³", axle: "Single" },
     { id: "silv4500", name: "Silverado 4500HD", shape: "rectangular", length: 9, topWidth: 7, bottomWidth: 7, depth: 2.2, capacity: "4-5 yd³", axle: "Single" },
     { id: "silv5500", name: "Silverado 5500HD", shape: "rectangular", length: 10, topWidth: 7, bottomWidth: 7, depth: 2.5, capacity: "5-6 yd³", axle: "Single" },
     { id: "silv6500", name: "Silverado 6500HD", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.8, capacity: "6-8 yd³", axle: "Single" },
     { id: "kodiak", name: "TopKick/Kodiak C7500", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 3, capacity: "8-10 yd³", axle: "Single" },
   ]},
-  { id: "ram", name: "RAM", logo: "https://logo.clearbit.com/ramtrucks.com", models: [
+  { id: "ram", name: "RAM", logo: "#1A1A1A", models: [
     { id: "ram3500", name: "RAM 3500 Dump", shape: "rectangular", length: 8, topWidth: 7, bottomWidth: 7, depth: 2, capacity: "3-4 yd³", axle: "Single" },
     { id: "ram4500", name: "RAM 4500 Dump", shape: "rectangular", length: 9, topWidth: 7, bottomWidth: 7, depth: 2.2, capacity: "4-5 yd³", axle: "Single" },
     { id: "ram5500", name: "RAM 5500 Dump", shape: "rectangular", length: 10, topWidth: 7, bottomWidth: 7, depth: 2.5, capacity: "5-6 yd³", axle: "Single" },
   ]},
-  { id: "intl", name: "International", logo: "https://logo.clearbit.com/internationaltrucks.com", models: [
+  { id: "intl", name: "International", logo: "#C41230", models: [
     { id: "mv607", name: "MV607 Dump", shape: "trapezoid", length: 10, topWidth: 7, bottomWidth: 6.5, depth: 2.3, capacity: "5-6 yd³", axle: "Single" },
     { id: "hv507", name: "HV507 Single Axle", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.5, capacity: "6-8 yd³", axle: "Single" },
     { id: "hv613", name: "HV613 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
@@ -39,7 +39,7 @@ const TRUCK_MANUFACTURERS: TruckMfg[] = [
     { id: "hx620_tri", name: "HX620 Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
     { id: "hx620_quad", name: "HX620 Quad Axle", shape: "trapezoid", length: 18, topWidth: 8, bottomWidth: 7, depth: 3.7, capacity: "18-20 yd³", axle: "Quad" },
   ]},
-  { id: "mack", name: "Mack", logo: "https://logo.clearbit.com/macktrucks.com", models: [
+  { id: "mack", name: "Mack", logo: "#8B7355", models: [
     { id: "mack_md6", name: "MD6 Medium Duty", shape: "trapezoid", length: 10, topWidth: 7, bottomWidth: 6.5, depth: 2.3, capacity: "5-6 yd³", axle: "Single" },
     { id: "mack_granite_s", name: "Granite Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", axle: "Single" },
     { id: "mack_granite_t", name: "Granite Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
@@ -47,7 +47,7 @@ const TRUCK_MANUFACTURERS: TruckMfg[] = [
     { id: "mack_granite_quad", name: "Granite Quad Axle", shape: "trapezoid", length: 18, topWidth: 8, bottomWidth: 7, depth: 3.7, capacity: "18-20 yd³", axle: "Quad" },
     { id: "mack_pinnacle", name: "Pinnacle Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.7, capacity: "10-12 yd³", axle: "Tandem" },
   ]},
-  { id: "kenworth", name: "Kenworth", logo: "https://logo.clearbit.com/kenworth.com", models: [
+  { id: "kenworth", name: "Kenworth", logo: "#E85D00", models: [
     { id: "kw_t370", name: "T370 Single Axle", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.5, capacity: "6-8 yd³", axle: "Single" },
     { id: "kw_t470", name: "T470 Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.8, capacity: "8-10 yd³", axle: "Single" },
     { id: "kw_t800_s", name: "T800 Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", axle: "Single" },
@@ -56,7 +56,7 @@ const TRUCK_MANUFACTURERS: TruckMfg[] = [
     { id: "kw_t880_tri", name: "T880 Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
     { id: "kw_t880_quad", name: "T880S Quad Axle", shape: "trapezoid", length: 18, topWidth: 8, bottomWidth: 7, depth: 3.7, capacity: "18-20 yd³", axle: "Quad" },
   ]},
-  { id: "peterbilt", name: "Peterbilt", logo: "https://logo.clearbit.com/peterbilt.com", models: [
+  { id: "peterbilt", name: "Peterbilt", logo: "#C8102E", models: [
     { id: "pb_348", name: "348 Single Axle", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.5, capacity: "6-8 yd³", axle: "Single" },
     { id: "pb_365", name: "365 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
     { id: "pb_567_t", name: "567 Tandem", shape: "trapezoid", length: 14.5, topWidth: 7.5, bottomWidth: 6.5, depth: 2.7, capacity: "11-13 yd³", axle: "Tandem" },
@@ -64,7 +64,7 @@ const TRUCK_MANUFACTURERS: TruckMfg[] = [
     { id: "pb_567_quad", name: "567 Quad Axle", shape: "trapezoid", length: 18, topWidth: 8, bottomWidth: 7, depth: 3.7, capacity: "18-20 yd³", axle: "Quad" },
     { id: "pb_389", name: "389 Transfer Dump", shape: "trapezoid", length: 22, topWidth: 8, bottomWidth: 7, depth: 4, capacity: "24-26 yd³", axle: "Transfer" },
   ]},
-  { id: "volvo", name: "Volvo", logo: "https://logo.clearbit.com/volvotrucks.com", models: [
+  { id: "volvo", name: "Volvo", logo: "#003057", models: [
     { id: "volvo_vhd_s", name: "VHD 300 Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", axle: "Single" },
     { id: "volvo_vhd_t", name: "VHD 300 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
     { id: "volvo_vhd_tri", name: "VHD 300 Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
@@ -72,7 +72,7 @@ const TRUCK_MANUFACTURERS: TruckMfg[] = [
     { id: "volvo_a30", name: "A30G Articulated", shape: "trapezoid", length: 15, topWidth: 9.5, bottomWidth: 8, depth: 4.5, capacity: "20-22 yd³", axle: "Artic 6x6" },
     { id: "volvo_a40", name: "A40G Articulated", shape: "trapezoid", length: 16.5, topWidth: 10, bottomWidth: 8.5, depth: 5, capacity: "26-28 yd³", axle: "Artic 6x6" },
   ]},
-  { id: "freightliner", name: "Freightliner", logo: "https://logo.clearbit.com/freightliner.com", models: [
+  { id: "freightliner", name: "Freightliner", logo: "#555555", models: [
     { id: "fl_m2106", name: "M2 106 Single Axle", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.5, capacity: "6-8 yd³", axle: "Single" },
     { id: "fl_m2112", name: "M2 112 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
     { id: "fl_114sd_s", name: "114SD Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", axle: "Single" },
@@ -81,14 +81,14 @@ const TRUCK_MANUFACTURERS: TruckMfg[] = [
     { id: "fl_122sd_t", name: "122SD Tandem", shape: "trapezoid", length: 14.5, topWidth: 7.5, bottomWidth: 6.5, depth: 2.7, capacity: "11-13 yd³", axle: "Tandem" },
     { id: "fl_122sd_tri", name: "122SD Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
   ]},
-  { id: "western_star", name: "Western Star", logo: "https://logo.clearbit.com/westernstartrucks.com", models: [
+  { id: "western_star", name: "Western Star", logo: "#1C3D6E", models: [
     { id: "ws_4700", name: "4700SF Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", axle: "Single" },
     { id: "ws_4700_t", name: "4700SB Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
     { id: "ws_4900_t", name: "4900 Tandem", shape: "trapezoid", length: 14.5, topWidth: 7.5, bottomWidth: 6.5, depth: 2.7, capacity: "11-13 yd³", axle: "Tandem" },
     { id: "ws_4900_tri", name: "4900 Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
     { id: "ws_6900_tri", name: "6900XD Tri-Axle", shape: "trapezoid", length: 17.5, topWidth: 8, bottomWidth: 7, depth: 3.6, capacity: "17-19 yd³", axle: "Tri-Axle" },
   ]},
-  { id: "cat", name: "Caterpillar", logo: "https://logo.clearbit.com/cat.com", models: [
+  { id: "cat", name: "Caterpillar", logo: "#FFCB05", models: [
     { id: "cat_730", name: "730 Articulated", shape: "trapezoid", length: 14, topWidth: 9, bottomWidth: 7.5, depth: 4, capacity: "16-18 yd³", axle: "Artic 6x6" },
     { id: "cat_735", name: "735 Articulated", shape: "trapezoid", length: 14.5, topWidth: 9.5, bottomWidth: 8, depth: 4.2, capacity: "18-20 yd³", axle: "Artic 6x6" },
     { id: "cat_740", name: "740 GC Articulated", shape: "trapezoid", length: 15, topWidth: 9.5, bottomWidth: 8, depth: 4.5, capacity: "20-22 yd³", axle: "Artic 6x6" },
@@ -96,7 +96,7 @@ const TRUCK_MANUFACTURERS: TruckMfg[] = [
     { id: "cat_770", name: "770G Off-Highway", shape: "trapezoid", length: 18, topWidth: 12, bottomWidth: 10, depth: 6, capacity: "40-42 yd³", axle: "Rigid" },
     { id: "cat_775", name: "775G Off-Highway", shape: "trapezoid", length: 20, topWidth: 13, bottomWidth: 11, depth: 7, capacity: "55-58 yd³", axle: "Rigid" },
   ]},
-  { id: "trailer", name: "Trailers / Other", logo: "https://logo.clearbit.com/trailking.com", models: [
+  { id: "trailer", name: "Trailers / Other", logo: "#4A8B3F", models: [
     { id: "transfer", name: "Transfer Dump", shape: "trapezoid", length: 22, topWidth: 8, bottomWidth: 7, depth: 4, capacity: "24-26 yd³", axle: "Transfer" },
     { id: "belly", name: "Belly Dump Trailer", shape: "trapezoid", length: 20, topWidth: 8, bottomWidth: 5, depth: 4.5, capacity: "20-22 yd³", axle: "Bottom-dump" },
     { id: "end_dump", name: "End Dump Trailer", shape: "trapezoid", length: 24, topWidth: 8, bottomWidth: 7, depth: 5, capacity: "28-32 yd³", axle: "Trailer" },
@@ -619,8 +619,7 @@ export default function LoadWeighV2() {
                 <div key={mfg.id}>
                   <button className={`mfg-btn ${selMfgIdx === mIdx ? "open" : ""}`}
                     onClick={() => setSelMfgIdx(selMfgIdx === mIdx ? null : mIdx)}>
-                    <img src={mfg.logo} alt="" style={{ width: 24, height: 24, borderRadius: 4, objectFit: "contain", background: "#fff" }}
-                      onError={(e: any) => { e.target.outerHTML = `<div style="width:24px;height:24px;border-radius:4px;background:${C.surface2};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${C.dim};flex-shrink:0">${mfg.name.charAt(0)}</div>`; }} />
+                    <div style={{ width:28, height:28, borderRadius:6, background:mfg.logo, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color: ["#FFCB05","#D1A827"].includes(mfg.logo) ? "#1A1A1A" : "#fff", flexShrink:0, fontFamily:"'Outfit',sans-serif" }}>{mfg.name.charAt(0)}</div>
                     <div style={{ flex: 1 }}><div style={{ fontWeight: 700 }}>{mfg.name}</div><div style={{ fontSize: 10, color: C.dim }}>{mfg.models.length} models</div></div>
                     <span style={{ fontSize: 12, color: C.dim }}>{selMfgIdx === mIdx ? "▲" : "▼"}</span>
                   </button>
