@@ -202,22 +202,29 @@ async function analyzeLoadPhotos(base64Images: string[], apiKey: string) {
     body: JSON.stringify({
       model: "gpt-4o", temperature: 0.3, max_tokens: 600,
       messages: [
-        { role: "system", content: `You analyze photos of loaded dump trucks. You may receive 1-3 photos from different angles. Cross-reference all photos to produce the most accurate estimate. Return JSON only. Format:
-{"fillPercent":NUMBER_10_to_100,"materialGuess":"material name","heapProfile":"flat|crowned|heaped|maxheap","truckGuess":"truck make/model if visible","confidence":"high|medium|low","issue":"null or brief description of what's wrong/missing with the photos","betterAngle":"null or what photo angle would improve accuracy","notes":"brief observation"}.
-- confidence: high = clear view of load, material identifiable. medium = partially obscured or ambiguous. low = bad angle, blurry, or not a dump truck.
-- issue: null if photos are fine, otherwise explain the problem (e.g. "Photo is too far away to see material", "Only cab visible, need bed view", "Blurry image").
-- betterAngle: null if not needed, otherwise suggest (e.g. "Take a side view showing the full bed", "Get closer to the material surface").
-Return ONLY valid JSON.` },
+        { role: "system", content: `You analyze photos of loaded dump trucks. You may receive 1-3 photos. Return JSON only.
+
+FIRST: determine if the photo(s) actually show a dump truck with a loaded bed. If NOT (e.g. person, animal, car, landscape, random object, empty truck, selfie), return:
+{"isValidLoad":false,"rejection":"Brief reason why this isn't a loaded dump truck photo"}
+
+If it IS a loaded dump truck, return:
+{"isValidLoad":true,"fillPercent":NUMBER_10_to_100,"materialGuess":"material name","heapProfile":"flat|crowned|heaped|maxheap","truckGuess":"truck make/model if visible","confidence":"high|medium|low","issue":null_or_string,"betterAngle":null_or_string,"notes":"brief observation"}
+
+confidence: high=clear load view, medium=partially obscured, low=bad angle/blurry.
+issue: null if fine, otherwise what's wrong. betterAngle: null or suggested angle.
+Return ONLY valid JSON, no markdown.` },
         { role: "user", content: [
           ...imageContent,
-          { type: "text", text: `Analyze ${base64Images.length === 1 ? "this" : "these " + base64Images.length} loaded dump truck photo${base64Images.length > 1 ? "s" : ""}. Cross-reference if multiple angles provided.` }
+          { type: "text", text: `Analyze ${base64Images.length === 1 ? "this photo" : "these " + base64Images.length + " photos"}. First determine if this shows a loaded dump truck. If yes, estimate fill level, material, and heap profile.` }
         ]}
       ],
     }),
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error.message || "API error");
-  return JSON.parse(data.choices[0].message.content.trim().replace(/```json\n?|```/g, "").trim());
+  const raw = data.choices[0].message.content.trim().replace(/```json\n?|```/g, "").trim();
+  try { return JSON.parse(raw); }
+  catch { return { isValidLoad: false, rejection: "AI returned an unreadable response. Try with a clearer photo." }; }
 }
 
 // ─── COLORS ──────────────────────────────────────────
@@ -366,7 +373,7 @@ export default function LoadWeighV2() {
   };
 
   const applyPhotoAnalysis = () => {
-    if (!photoAnalysis) return;
+    if (!photoAnalysis || !photoAnalysis.isValidLoad) return;
     setFillPct(Math.max(10, Math.min(100, photoAnalysis.fillPercent)));
     const heapMap: any = { flat: 0, crowned: 1, heaped: 2, maxheap: 3 };
     if (heapMap[photoAnalysis.heapProfile] !== undefined) setHeapIdx(heapMap[photoAnalysis.heapProfile]);
@@ -612,7 +619,8 @@ export default function LoadWeighV2() {
                 <div key={mfg.id}>
                   <button className={`mfg-btn ${selMfgIdx === mIdx ? "open" : ""}`}
                     onClick={() => setSelMfgIdx(selMfgIdx === mIdx ? null : mIdx)}>
-                    <img src={mfg.logo} alt={mfg.name} style={{ width: 24, height: 24, borderRadius: 4, objectFit: "contain", background: "#fff" }} onError={(e: any) => { e.target.style.display = 'none'; }} />
+                    <img src={mfg.logo} alt="" style={{ width: 24, height: 24, borderRadius: 4, objectFit: "contain", background: "#fff" }}
+                      onError={(e: any) => { e.target.outerHTML = `<div style="width:24px;height:24px;border-radius:4px;background:${C.surface2};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${C.dim};flex-shrink:0">${mfg.name.charAt(0)}</div>`; }} />
                     <div style={{ flex: 1 }}><div style={{ fontWeight: 700 }}>{mfg.name}</div><div style={{ fontSize: 10, color: C.dim }}>{mfg.models.length} models</div></div>
                     <span style={{ fontSize: 12, color: C.dim }}>{selMfgIdx === mIdx ? "▲" : "▼"}</span>
                   </button>
@@ -807,7 +815,16 @@ export default function LoadWeighV2() {
                     </button>
                   )}
                   {photoAnalysisError && <div style={{ color: C.red, fontSize: 11, marginTop: 8 }}>{photoAnalysisError}</div>}
-                  {photoAnalysis && (
+                  {photoAnalysis && !photoAnalysis.isValidLoad && (
+                    <div style={{ marginTop: 10, padding: "14px", background: "#FFEBEE", border: `1px solid ${C.red}`, borderRadius: 10 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: C.red, marginBottom: 4 }}>❌ Not a loaded dump truck</div>
+                      <div style={{ fontSize: 12, color: C.text }}>{photoAnalysis.rejection}</div>
+                      <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>Please upload a photo showing the loaded bed of a dump truck.</div>
+                      <button className="btn-ghost" onClick={() => { setPhotos([]); setPhotoAnalysis(null); fileRef.current?.click(); }}
+                        style={{ marginTop: 8, fontSize: 11, padding: "6px 12px" }}>📸 Take a new photo</button>
+                    </div>
+                  )}
+                  {photoAnalysis && photoAnalysis.isValidLoad && (
                     <div className="ai-bar" style={{ marginTop: 10 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div className="ai-bar-title" style={{ marginBottom: 0 }}>🤖 AI Photo Analysis</div>
@@ -910,7 +927,7 @@ export default function LoadWeighV2() {
               <div style={{ marginTop: 8, fontSize: 11, color: C.red, fontWeight: 500 }}>⚠ ±15% estimate — verify on certified scale</div>
             </div>
 
-            {photoAnalysis && (
+            {photoAnalysis && photoAnalysis.isValidLoad && (
               <div className="ai-bar">
                 <div className="ai-bar-title">🤖 AI Cross-Check</div>
                 <div style={{ fontSize: 11 }}>
