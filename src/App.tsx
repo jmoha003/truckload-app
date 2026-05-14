@@ -1,21 +1,107 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
-// ─── DATA ──────────────────────────────────────────────
-const TRUCK_PROFILES = [
-  { id: "custom", name: "Custom Truck", shape: "rectangular", length: 0, topWidth: 0, bottomWidth: 0, depth: 0, capacity: "—", desc: "Enter your own dimensions" },
-  { id: "f350", name: "Ford F-350 Dump", shape: "rectangular", length: 8, topWidth: 7, bottomWidth: 7, depth: 2, capacity: "3-4 yd³", desc: "Pickup contractor dump" },
-  { id: "f450", name: "Ford F-450/550", shape: "rectangular", length: 9, topWidth: 7, bottomWidth: 7, depth: 2.2, capacity: "4-5 yd³", desc: "Medium duty pickup" },
-  { id: "intl4300", name: "International 4300", shape: "trapezoid", length: 10, topWidth: 7, bottomWidth: 6.5, depth: 2.3, capacity: "5-6 yd³", desc: "Single axle – common in VA Beach" },
-  { id: "intl7400", name: "International 7400", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", desc: "Single axle heavy" },
-  { id: "mack_granite", name: "Mack Granite Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", desc: "Workhorse of Hampton Roads" },
-  { id: "kenworth_t880", name: "Kenworth T880 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", desc: "Common in VA DOT jobs" },
-  { id: "peterbilt_567", name: "Peterbilt 567 Tandem", shape: "trapezoid", length: 14.5, topWidth: 7.5, bottomWidth: 6.5, depth: 2.7, capacity: "11-13 yd³", desc: "Heavy haul tandem" },
-  { id: "triaxle", name: "Tri-Axle Dump", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", desc: "Large jobs, site work" },
-  { id: "quadaxle", name: "Quad Axle Dump", shape: "trapezoid", length: 18, topWidth: 8, bottomWidth: 7, depth: 3.7, capacity: "18-20 yd³", desc: "Max legal highway load" },
-  { id: "transfer", name: "Transfer Dump", shape: "trapezoid", length: 22, topWidth: 8, bottomWidth: 7, depth: 4, capacity: "24-26 yd³", desc: "Truck + pup trailer" },
-  { id: "belly", name: "Belly Dump Trailer", shape: "trapezoid", length: 20, topWidth: 8, bottomWidth: 5, depth: 4.5, capacity: "20-22 yd³", desc: "Bottom-discharge, highway haul" },
-  { id: "art_a25", name: "Volvo A25 (Artic)", shape: "trapezoid", length: 14, topWidth: 9, bottomWidth: 7.5, depth: 4, capacity: "16-18 yd³", desc: "Off-road articulated" },
-  { id: "art_a30", name: "Volvo A30 (Artic)", shape: "trapezoid", length: 15, topWidth: 9.5, bottomWidth: 8, depth: 4.5, capacity: "20-22 yd³", desc: "Large site articulated" },
+// ─── TRUCK DATA (grouped by manufacturer) ─────────────
+interface TruckProfile {
+  id: string; name: string; shape: "rectangular" | "trapezoid";
+  length: number; topWidth: number; bottomWidth: number; depth: number;
+  capacity: string; axle: string;
+}
+interface TruckMfg {
+  id: string; name: string; logo: string; models: TruckProfile[];
+}
+
+const TRUCK_MANUFACTURERS: TruckMfg[] = [
+  { id: "ford", name: "Ford", logo: "https://logo.clearbit.com/ford.com", models: [
+    { id: "f350", name: "F-350 Dump", shape: "rectangular", length: 8, topWidth: 7, bottomWidth: 7, depth: 2, capacity: "3-4 yd³", axle: "Single" },
+    { id: "f450", name: "F-450 Dump", shape: "rectangular", length: 9, topWidth: 7, bottomWidth: 7, depth: 2.2, capacity: "4-5 yd³", axle: "Single" },
+    { id: "f550", name: "F-550 Dump", shape: "rectangular", length: 10, topWidth: 7, bottomWidth: 7, depth: 2.5, capacity: "5-6 yd³", axle: "Single" },
+    { id: "f600", name: "F-600 Dump", shape: "trapezoid", length: 10, topWidth: 7, bottomWidth: 6.5, depth: 2.5, capacity: "5-6 yd³", axle: "Single" },
+    { id: "f650", name: "F-650 Dump", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.8, capacity: "6-8 yd³", axle: "Single" },
+    { id: "f750", name: "F-750 Dump", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 3, capacity: "8-10 yd³", axle: "Single" },
+  ]},
+  { id: "chevy", name: "Chevrolet / GMC", logo: "https://logo.clearbit.com/chevrolet.com", models: [
+    { id: "silv3500", name: "Silverado/Sierra 3500HD", shape: "rectangular", length: 8, topWidth: 7, bottomWidth: 7, depth: 2, capacity: "3-4 yd³", axle: "Single" },
+    { id: "silv4500", name: "Silverado 4500HD", shape: "rectangular", length: 9, topWidth: 7, bottomWidth: 7, depth: 2.2, capacity: "4-5 yd³", axle: "Single" },
+    { id: "silv5500", name: "Silverado 5500HD", shape: "rectangular", length: 10, topWidth: 7, bottomWidth: 7, depth: 2.5, capacity: "5-6 yd³", axle: "Single" },
+    { id: "silv6500", name: "Silverado 6500HD", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.8, capacity: "6-8 yd³", axle: "Single" },
+    { id: "kodiak", name: "TopKick/Kodiak C7500", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 3, capacity: "8-10 yd³", axle: "Single" },
+  ]},
+  { id: "ram", name: "RAM", logo: "https://logo.clearbit.com/ramtrucks.com", models: [
+    { id: "ram3500", name: "RAM 3500 Dump", shape: "rectangular", length: 8, topWidth: 7, bottomWidth: 7, depth: 2, capacity: "3-4 yd³", axle: "Single" },
+    { id: "ram4500", name: "RAM 4500 Dump", shape: "rectangular", length: 9, topWidth: 7, bottomWidth: 7, depth: 2.2, capacity: "4-5 yd³", axle: "Single" },
+    { id: "ram5500", name: "RAM 5500 Dump", shape: "rectangular", length: 10, topWidth: 7, bottomWidth: 7, depth: 2.5, capacity: "5-6 yd³", axle: "Single" },
+  ]},
+  { id: "intl", name: "International", logo: "https://logo.clearbit.com/internationaltrucks.com", models: [
+    { id: "mv607", name: "MV607 Dump", shape: "trapezoid", length: 10, topWidth: 7, bottomWidth: 6.5, depth: 2.3, capacity: "5-6 yd³", axle: "Single" },
+    { id: "hv507", name: "HV507 Single Axle", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.5, capacity: "6-8 yd³", axle: "Single" },
+    { id: "hv613", name: "HV613 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
+    { id: "hx615", name: "HX615 Tandem", shape: "trapezoid", length: 14.5, topWidth: 7.5, bottomWidth: 6.5, depth: 2.7, capacity: "11-13 yd³", axle: "Tandem" },
+    { id: "hx620_tri", name: "HX620 Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
+    { id: "hx620_quad", name: "HX620 Quad Axle", shape: "trapezoid", length: 18, topWidth: 8, bottomWidth: 7, depth: 3.7, capacity: "18-20 yd³", axle: "Quad" },
+  ]},
+  { id: "mack", name: "Mack", logo: "https://logo.clearbit.com/macktrucks.com", models: [
+    { id: "mack_md6", name: "MD6 Medium Duty", shape: "trapezoid", length: 10, topWidth: 7, bottomWidth: 6.5, depth: 2.3, capacity: "5-6 yd³", axle: "Single" },
+    { id: "mack_granite_s", name: "Granite Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", axle: "Single" },
+    { id: "mack_granite_t", name: "Granite Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
+    { id: "mack_granite_tri", name: "Granite Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
+    { id: "mack_granite_quad", name: "Granite Quad Axle", shape: "trapezoid", length: 18, topWidth: 8, bottomWidth: 7, depth: 3.7, capacity: "18-20 yd³", axle: "Quad" },
+    { id: "mack_pinnacle", name: "Pinnacle Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.7, capacity: "10-12 yd³", axle: "Tandem" },
+  ]},
+  { id: "kenworth", name: "Kenworth", logo: "https://logo.clearbit.com/kenworth.com", models: [
+    { id: "kw_t370", name: "T370 Single Axle", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.5, capacity: "6-8 yd³", axle: "Single" },
+    { id: "kw_t470", name: "T470 Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.8, capacity: "8-10 yd³", axle: "Single" },
+    { id: "kw_t800_s", name: "T800 Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", axle: "Single" },
+    { id: "kw_t800_t", name: "T800 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
+    { id: "kw_t880_t", name: "T880 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
+    { id: "kw_t880_tri", name: "T880 Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
+    { id: "kw_t880_quad", name: "T880S Quad Axle", shape: "trapezoid", length: 18, topWidth: 8, bottomWidth: 7, depth: 3.7, capacity: "18-20 yd³", axle: "Quad" },
+  ]},
+  { id: "peterbilt", name: "Peterbilt", logo: "https://logo.clearbit.com/peterbilt.com", models: [
+    { id: "pb_348", name: "348 Single Axle", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.5, capacity: "6-8 yd³", axle: "Single" },
+    { id: "pb_365", name: "365 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
+    { id: "pb_567_t", name: "567 Tandem", shape: "trapezoid", length: 14.5, topWidth: 7.5, bottomWidth: 6.5, depth: 2.7, capacity: "11-13 yd³", axle: "Tandem" },
+    { id: "pb_567_tri", name: "567 Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
+    { id: "pb_567_quad", name: "567 Quad Axle", shape: "trapezoid", length: 18, topWidth: 8, bottomWidth: 7, depth: 3.7, capacity: "18-20 yd³", axle: "Quad" },
+    { id: "pb_389", name: "389 Transfer Dump", shape: "trapezoid", length: 22, topWidth: 8, bottomWidth: 7, depth: 4, capacity: "24-26 yd³", axle: "Transfer" },
+  ]},
+  { id: "volvo", name: "Volvo", logo: "https://logo.clearbit.com/volvotrucks.com", models: [
+    { id: "volvo_vhd_s", name: "VHD 300 Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", axle: "Single" },
+    { id: "volvo_vhd_t", name: "VHD 300 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
+    { id: "volvo_vhd_tri", name: "VHD 300 Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
+    { id: "volvo_a25", name: "A25G Articulated", shape: "trapezoid", length: 14, topWidth: 9, bottomWidth: 7.5, depth: 4, capacity: "16-18 yd³", axle: "Artic 6x6" },
+    { id: "volvo_a30", name: "A30G Articulated", shape: "trapezoid", length: 15, topWidth: 9.5, bottomWidth: 8, depth: 4.5, capacity: "20-22 yd³", axle: "Artic 6x6" },
+    { id: "volvo_a40", name: "A40G Articulated", shape: "trapezoid", length: 16.5, topWidth: 10, bottomWidth: 8.5, depth: 5, capacity: "26-28 yd³", axle: "Artic 6x6" },
+  ]},
+  { id: "freightliner", name: "Freightliner", logo: "https://logo.clearbit.com/freightliner.com", models: [
+    { id: "fl_m2106", name: "M2 106 Single Axle", shape: "trapezoid", length: 11, topWidth: 7, bottomWidth: 6.5, depth: 2.5, capacity: "6-8 yd³", axle: "Single" },
+    { id: "fl_m2112", name: "M2 112 Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
+    { id: "fl_114sd_s", name: "114SD Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", axle: "Single" },
+    { id: "fl_114sd_t", name: "114SD Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
+    { id: "fl_114sd_tri", name: "114SD Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
+    { id: "fl_122sd_t", name: "122SD Tandem", shape: "trapezoid", length: 14.5, topWidth: 7.5, bottomWidth: 6.5, depth: 2.7, capacity: "11-13 yd³", axle: "Tandem" },
+    { id: "fl_122sd_tri", name: "122SD Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
+  ]},
+  { id: "western_star", name: "Western Star", logo: "https://logo.clearbit.com/westernstartrucks.com", models: [
+    { id: "ws_4700", name: "4700SF Single Axle", shape: "trapezoid", length: 12, topWidth: 7.5, bottomWidth: 6.5, depth: 2.5, capacity: "8-10 yd³", axle: "Single" },
+    { id: "ws_4700_t", name: "4700SB Tandem", shape: "trapezoid", length: 14, topWidth: 7.5, bottomWidth: 6.5, depth: 2.6, capacity: "10-12 yd³", axle: "Tandem" },
+    { id: "ws_4900_t", name: "4900 Tandem", shape: "trapezoid", length: 14.5, topWidth: 7.5, bottomWidth: 6.5, depth: 2.7, capacity: "11-13 yd³", axle: "Tandem" },
+    { id: "ws_4900_tri", name: "4900 Tri-Axle", shape: "trapezoid", length: 17, topWidth: 8, bottomWidth: 7, depth: 3.5, capacity: "16-18 yd³", axle: "Tri-Axle" },
+    { id: "ws_6900_tri", name: "6900XD Tri-Axle", shape: "trapezoid", length: 17.5, topWidth: 8, bottomWidth: 7, depth: 3.6, capacity: "17-19 yd³", axle: "Tri-Axle" },
+  ]},
+  { id: "cat", name: "Caterpillar", logo: "https://logo.clearbit.com/cat.com", models: [
+    { id: "cat_730", name: "730 Articulated", shape: "trapezoid", length: 14, topWidth: 9, bottomWidth: 7.5, depth: 4, capacity: "16-18 yd³", axle: "Artic 6x6" },
+    { id: "cat_735", name: "735 Articulated", shape: "trapezoid", length: 14.5, topWidth: 9.5, bottomWidth: 8, depth: 4.2, capacity: "18-20 yd³", axle: "Artic 6x6" },
+    { id: "cat_740", name: "740 GC Articulated", shape: "trapezoid", length: 15, topWidth: 9.5, bottomWidth: 8, depth: 4.5, capacity: "20-22 yd³", axle: "Artic 6x6" },
+    { id: "cat_745", name: "745 Articulated", shape: "trapezoid", length: 16, topWidth: 10, bottomWidth: 8.5, depth: 5, capacity: "26-28 yd³", axle: "Artic 6x6" },
+    { id: "cat_770", name: "770G Off-Highway", shape: "trapezoid", length: 18, topWidth: 12, bottomWidth: 10, depth: 6, capacity: "40-42 yd³", axle: "Rigid" },
+    { id: "cat_775", name: "775G Off-Highway", shape: "trapezoid", length: 20, topWidth: 13, bottomWidth: 11, depth: 7, capacity: "55-58 yd³", axle: "Rigid" },
+  ]},
+  { id: "trailer", name: "Trailers / Other", logo: "https://logo.clearbit.com/trailking.com", models: [
+    { id: "transfer", name: "Transfer Dump", shape: "trapezoid", length: 22, topWidth: 8, bottomWidth: 7, depth: 4, capacity: "24-26 yd³", axle: "Transfer" },
+    { id: "belly", name: "Belly Dump Trailer", shape: "trapezoid", length: 20, topWidth: 8, bottomWidth: 5, depth: 4.5, capacity: "20-22 yd³", axle: "Bottom-dump" },
+    { id: "end_dump", name: "End Dump Trailer", shape: "trapezoid", length: 24, topWidth: 8, bottomWidth: 7, depth: 5, capacity: "28-32 yd³", axle: "Trailer" },
+    { id: "side_dump", name: "Side Dump Trailer", shape: "trapezoid", length: 26, topWidth: 8.5, bottomWidth: 7, depth: 5.5, capacity: "32-36 yd³", axle: "Trailer" },
+  ]},
 ];
 
 const MATERIALS = [
@@ -57,40 +143,74 @@ const HEAP_PROFILES = [
   { id: "maxheap", label: "Max Heap", factor: 1.4, desc: "Overloaded" },
 ];
 
-// ─── STORAGE HELPERS (localStorage) ──────────────────
-function loadHistory(): any[] {
-  try {
-    const data = localStorage.getItem("truckload_history");
-    return data ? JSON.parse(data) : [];
-  } catch { return []; }
-}
-
-function saveEstimate(entry: any) {
-  try {
-    const history = loadHistory();
-    history.push({ ...entry, ts: Date.now() });
-    localStorage.setItem("truckload_history", JSON.stringify(history.slice(-100)));
-  } catch (e) { console.error("Storage save error:", e); }
-}
-
+// ─── STORAGE HELPERS ─────────────────────────────────
+function loadHistory(): any[] { try { const d = localStorage.getItem("truckload_history"); return d ? JSON.parse(d) : []; } catch { return []; } }
+function saveEstimate(entry: any) { try { const h = loadHistory(); h.push({ ...entry, ts: Date.now() }); localStorage.setItem("truckload_history", JSON.stringify(h.slice(-100))); } catch {} }
 function getSuggestion(truckId: any, materialId: any) {
   try {
-    const history = loadHistory();
-    const matches = history.filter((h: any) => h.truckId === truckId && h.materialId === materialId);
-    if (matches.length < 3) return null;
-    const avgFill = Math.round(matches.reduce((s: number, m: any) => s + m.fillPct, 0) / matches.length);
-    const heapCounts: any = {};
-    matches.forEach((m: any) => { heapCounts[m.heapId] = (heapCounts[m.heapId] || 0) + 1; });
-    const topHeap = Object.entries(heapCounts).sort((a: any, b: any) => b[1] - a[1])[0][0];
-    return { fillPct: avgFill, heapId: topHeap, count: matches.length };
+    const h = loadHistory().filter((x: any) => x.truckId === truckId && x.materialId === materialId);
+    if (h.length < 3) return null;
+    const avgFill = Math.round(h.reduce((s: number, m: any) => s + m.fillPct, 0) / h.length);
+    const hc: any = {}; h.forEach((m: any) => { hc[m.heapId] = (hc[m.heapId] || 0) + 1; });
+    return { fillPct: avgFill, heapId: Object.entries(hc).sort((a: any, b: any) => b[1] - a[1])[0][0], count: h.length };
   } catch { return null; }
 }
+function getApiKey(): string { return localStorage.getItem("truckload_openai_key") || ""; }
+function setApiKey(key: string) { localStorage.setItem("truckload_openai_key", key); }
+
+// ─── GPT API ─────────────────────────────────────────
+async function lookupTruckDimensions(query: string, apiKey: string) {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "gpt-4o-mini", temperature: 0.2,
+      messages: [
+        { role: "system", content: `You are a dump truck specifications expert. Given a truck description, return dump bed dimensions as JSON only. Format: {"name":"Full Model Name","shape":"trapezoid or rectangular","length":FT,"topWidth":FT,"bottomWidth":FT,"depth":FT,"capacity":"X-Y yd³","confidence":"high/medium/low"}. All in feet. Rectangular beds: topWidth equals bottomWidth. Return ONLY valid JSON.` },
+        { role: "user", content: query }
+      ],
+    }),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || "API error");
+  return JSON.parse(data.choices[0].message.content.trim().replace(/```json\n?|```/g, "").trim());
+}
+
+async function analyzeLoadPhoto(base64Image: string, apiKey: string) {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "gpt-4o", temperature: 0.3, max_tokens: 500,
+      messages: [
+        { role: "system", content: `You analyze loaded dump truck photos. Return JSON only. Format: {"fillPercent":NUMBER_10_to_100,"materialGuess":"material name","heapProfile":"flat|crowned|heaped|maxheap","truckGuess":"truck make/model if visible","notes":"brief observation"}. Return ONLY valid JSON.` },
+        { role: "user", content: [
+          { type: "image_url", image_url: { url: base64Image, detail: "low" } },
+          { type: "text", text: "Analyze this loaded dump truck photo." }
+        ]}
+      ],
+    }),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || "API error");
+  return JSON.parse(data.choices[0].message.content.trim().replace(/```json\n?|```/g, "").trim());
+}
+
+// ─── COLORS (from logo) ─────────────────────────────
+const C = {
+  green: "#4A8B3F", greenLight: "#6BBF59", greenPale: "#E8F5E4",
+  blue: "#5B7DB1", bluePale: "#E4ECF5",
+  dark: "#2D3B2D", bg: "#FFFFFF", surface: "#F7F9F5", surface2: "#EFF3EB",
+  border: "#D4DDD0", dim: "#7A8A72", text: "#1A2B1A",
+  red: "#C0392B", success: "#27AE60", warn: "#E67E22",
+};
 
 // ─── MAIN COMPONENT ──────────────────────────────────
-export default function LoadWeighV1() {
+export default function LoadWeighV2() {
   const [step, setStep] = useState(0);
-  const [truckIdx, setTruckIdx] = useState(0);
-  const [bedShape, setBedShape] = useState("rectangular");
+  const [selMfgIdx, setSelMfgIdx] = useState<number | null>(null);
+  const [selModelIdx, setSelModelIdx] = useState<number | null>(null);
+  const [bedShape, setBedShape] = useState<"rectangular"|"trapezoid">("rectangular");
   const [dims, setDims] = useState({ length: 0, topWidth: 0, bottomWidth: 0, depth: 0 });
   const [materialIdx, setMaterialIdx] = useState<number | null>(null);
   const [materialFilter, setMaterialFilter] = useState("All");
@@ -102,47 +222,73 @@ export default function LoadWeighV1() {
   const [suggestion, setSuggestion] = useState<any>(null);
   const [saved, setSaved] = useState(false);
   const [historyCount, setHistoryCount] = useState(0);
+  const [apiKey, setApiKeyState] = useState(getApiKey());
+  const [showApiInput, setShowApiInput] = useState(false);
+  const [truckQuery, setTruckQuery] = useState("");
+  const [truckLookupLoading, setTruckLookupLoading] = useState(false);
+  const [truckLookupResult, setTruckLookupResult] = useState<any>(null);
+  const [truckLookupError, setTruckLookupError] = useState("");
+  const [photoAnalysis, setPhotoAnalysis] = useState<any>(null);
+  const [photoAnalyzing, setPhotoAnalyzing] = useState(false);
+  const [photoAnalysisError, setPhotoAnalysisError] = useState("");
 
   const fileRef = useRef<HTMLInputElement>(null);
   const photoContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (truckIdx > 0 && materialIdx !== null) {
-      const truck = TRUCK_PROFILES[truckIdx];
-      const mat = MATERIALS[materialIdx];
-      setSuggestion(getSuggestion(truck.id, mat.id));
-    }
-  }, [truckIdx, materialIdx]);
+  const selectedTruck = selMfgIdx !== null && selModelIdx !== null ? TRUCK_MANUFACTURERS[selMfgIdx].models[selModelIdx] : null;
 
   useEffect(() => {
-    setHistoryCount(loadHistory().length);
-  }, []);
+    if (selectedTruck && materialIdx !== null) setSuggestion(getSuggestion(selectedTruck.id, MATERIALS[materialIdx].id));
+  }, [selectedTruck, materialIdx]);
+  useEffect(() => { setHistoryCount(loadHistory().length); }, []);
 
-  const handleTruckSelect = (idx: number) => {
-    setTruckIdx(idx);
-    const t = TRUCK_PROFILES[idx];
-    if (idx > 0) {
-      setBedShape(t.shape);
-      setDims({ length: t.length, topWidth: t.topWidth, bottomWidth: t.bottomWidth, depth: t.depth });
-    }
+  const handleApiKeySave = (key: string) => { setApiKeyState(key); setApiKey(key); setShowApiInput(false); };
+
+  const handleModelSelect = (mfgIdx: number, modelIdx: number) => {
+    setSelMfgIdx(mfgIdx); setSelModelIdx(modelIdx); setTruckLookupResult(null);
+    const m = TRUCK_MANUFACTURERS[mfgIdx].models[modelIdx];
+    setBedShape(m.shape); setDims({ length: m.length, topWidth: m.topWidth, bottomWidth: m.bottomWidth, depth: m.depth });
+  };
+
+  const handleTruckLookup = async () => {
+    if (!truckQuery.trim() || !apiKey) return;
+    setTruckLookupLoading(true); setTruckLookupError(""); setTruckLookupResult(null);
+    try {
+      const r = await lookupTruckDimensions(truckQuery, apiKey);
+      setTruckLookupResult(r); setBedShape(r.shape);
+      setDims({ length: r.length, topWidth: r.topWidth, bottomWidth: r.bottomWidth, depth: r.depth });
+      setSelMfgIdx(null); setSelModelIdx(null);
+    } catch (e: any) { setTruckLookupError(e.message || "Lookup failed"); }
+    finally { setTruckLookupLoading(false); }
   };
 
   const handlePhoto = (e: any) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev: any) => setPhoto(ev.target.result);
-      reader.readAsDataURL(file);
-    }
+    if (file) { const r = new FileReader(); r.onload = (ev: any) => { setPhoto(ev.target.result); setPhotoAnalysis(null); setPhotoAnalysisError(""); }; r.readAsDataURL(file); }
+  };
+
+  const handleAnalyzePhoto = async () => {
+    if (!photo || !apiKey) return;
+    setPhotoAnalyzing(true); setPhotoAnalysisError(""); setPhotoAnalysis(null);
+    try { setPhotoAnalysis(await analyzeLoadPhoto(photo, apiKey)); }
+    catch (e: any) { setPhotoAnalysisError(e.message || "Analysis failed"); }
+    finally { setPhotoAnalyzing(false); }
+  };
+
+  const applyPhotoAnalysis = () => {
+    if (!photoAnalysis) return;
+    setFillPct(Math.max(10, Math.min(100, photoAnalysis.fillPercent)));
+    const heapMap: any = { flat: 0, crowned: 1, heaped: 2, maxheap: 3 };
+    if (heapMap[photoAnalysis.heapProfile] !== undefined) setHeapIdx(heapMap[photoAnalysis.heapProfile]);
+    const guess = photoAnalysis.materialGuess.toLowerCase();
+    const mi = MATERIALS.findIndex(m => m.name.toLowerCase().includes(guess) || guess.includes(m.name.toLowerCase()) || guess.includes(m.id.replace(/_/g, " ")));
+    if (mi >= 0 && materialIdx === null) setMaterialIdx(mi);
   };
 
   const handleDrag = useCallback((clientY: number) => {
-    const container = photoContainerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const y = clientY - rect.top;
-    const pct = Math.round(Math.max(10, Math.min(100, (1 - y / rect.height) * 100)));
-    setFillPct(pct);
+    const c = photoContainerRef.current; if (!c) return;
+    const r = c.getBoundingClientRect();
+    setFillPct(Math.round(Math.max(10, Math.min(100, (1 - (clientY - r.top) / r.height) * 100))));
   }, []);
 
   const onPointerDown = (e: any) => { setDragging(true); handleDrag(e.clientY); };
@@ -151,10 +297,7 @@ export default function LoadWeighV1() {
 
   const calcVolume = () => {
     const { length: l, topWidth: tw, bottomWidth: bw, depth: d } = dims;
-    if (bedShape === "trapezoid") {
-      return (l * ((tw + bw) / 2) * d) / 27;
-    }
-    return (l * tw * d) / 27;
+    return bedShape === "trapezoid" ? (l * ((tw + bw) / 2) * d) / 27 : (l * tw * d) / 27;
   };
 
   const bedVolumeYd3 = calcVolume();
@@ -169,424 +312,349 @@ export default function LoadWeighV1() {
 
   const handleSave = () => {
     if (materialIdx === null || saved) return;
-    saveEstimate({
-      truckId: TRUCK_PROFILES[truckIdx].id,
-      materialId: MATERIALS[materialIdx].id,
-      fillPct,
-      heapId: HEAP_PROFILES[heapIdx].id,
-      moistureId: MOISTURE_LEVELS[moistureIdx].id,
-      weight: estimatedWeight,
-    });
-    setSaved(true);
-    setHistoryCount(prev => prev + 1);
+    saveEstimate({ truckId: selectedTruck?.id || truckLookupResult?.name || "custom", materialId: MATERIALS[materialIdx].id, fillPct, heapId: HEAP_PROFILES[heapIdx].id, moistureId: MOISTURE_LEVELS[moistureIdx].id, weight: estimatedWeight });
+    setSaved(true); setHistoryCount(p => p + 1);
   };
 
   const applySuggestion = () => {
-    if (!suggestion) return;
-    setFillPct(suggestion.fillPct);
-    const hIdx = HEAP_PROFILES.findIndex(h => h.id === suggestion.heapId);
-    if (hIdx >= 0) setHeapIdx(hIdx);
+    if (!suggestion) return; setFillPct(suggestion.fillPct);
+    const hi = HEAP_PROFILES.findIndex(h => h.id === suggestion.heapId); if (hi >= 0) setHeapIdx(hi);
   };
 
   const categories = ["All", ...new Set(MATERIALS.map(m => m.cat))];
   const filteredMaterials = materialFilter === "All" ? MATERIALS : MATERIALS.filter(m => m.cat === materialFilter);
-
   const STEPS = ["Truck", "Material", "Moisture", "Load", "Result"];
-  const canProceed = [
-    bedVolumeYd3 > 0.1,
-    materialIdx !== null,
-    true,
-    true,
-    true,
-  ];
+  const canProceed = [bedVolumeYd3 > 0.1, materialIdx !== null, true, true, true];
+  const truckDisplayName = selectedTruck ? `${TRUCK_MANUFACTURERS[selMfgIdx!].name} ${selectedTruck.name}` : truckLookupResult ? `${truckLookupResult.name} (AI)` : "Custom";
 
   return (
-    <div style={{
-      fontFamily: "'IBM Plex Mono', 'Fira Code', monospace",
-      background: "#0A0A0C",
-      color: "#E5E3DD",
-      minHeight: "100vh",
-      maxWidth: 500,
-      margin: "0 auto",
-      position: "relative",
-    }}>
+    <div style={{ fontFamily: "'IBM Plex Mono', 'Fira Code', monospace", background: C.bg, color: C.text, minHeight: "100vh", maxWidth: 500, margin: "0 auto", position: "relative" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap');
-        :root {
-          --bg: #0A0A0C; --s1: #131316; --s2: #1B1B1F; --s3: #242428;
-          --border: #2E2E33; --dim: #6B6B70; --text: #E5E3DD;
-          --amber: #F5A623; --amber-dim: #F5A62330; --red: #E54D42;
-          --green: #3DD68C; --blue: #4A9EF5;
-        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .fade { animation: fadeUp .3s ease-out; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px) } }
-        @keyframes pulseAmber { 0%,100% { box-shadow: 0 0 0 0 var(--amber-dim) } 50% { box-shadow: 0 0 0 8px transparent } }
-
-        input[type=range] { -webkit-appearance:none; width:100%; height:8px; background:var(--s3); border-radius:4px; outline:none; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:28px; height:28px; background:var(--amber); border-radius:50%; cursor:pointer; border:3px solid var(--bg); }
-        input[type=number] { background:var(--s1); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:8px; font-family:inherit; font-size:15px; width:100%; outline:none; }
-        input[type=number]:focus { border-color:var(--amber); }
-
-        .card { background:var(--s1); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:12px; }
-        .label { font-size:10px; color:var(--dim); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; font-weight:600; }
-        .chip {
-          display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px;
-          font-size:13px; cursor:pointer; transition:all .15s; border:1px solid var(--border);
-          background:var(--s1); color:var(--dim); width:100%; text-align:left; font-family:inherit;
-        }
-        .chip:hover { border-color:var(--s3); background:var(--s2); }
-        .chip.sel { border-color:var(--amber); background:var(--amber-dim); color:var(--amber); }
+        @keyframes spin { to { transform: rotate(360deg) } }
+        input[type=range] { -webkit-appearance:none; width:100%; height:8px; background:${C.surface2}; border-radius:4px; outline:none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:28px; height:28px; background:${C.green}; border-radius:50%; cursor:pointer; border:3px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.15); }
+        input[type=number], input[type=text], input[type=password] { background:${C.surface}; border:1px solid ${C.border}; color:${C.text}; padding:10px 12px; border-radius:8px; font-family:inherit; font-size:15px; width:100%; outline:none; }
+        input[type=number]:focus, input[type=text]:focus, input[type=password]:focus { border-color:${C.green}; box-shadow:0 0 0 3px ${C.greenPale}; }
+        .card { background:${C.surface}; border:1px solid ${C.border}; border-radius:14px; padding:16px; margin-bottom:12px; }
+        .label { font-size:10px; color:${C.dim}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; font-weight:600; }
+        .chip { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px; font-size:13px; cursor:pointer; transition:all .15s; border:1px solid ${C.border}; background:#fff; color:${C.dim}; width:100%; text-align:left; font-family:inherit; }
+        .chip:hover { border-color:${C.green}; background:${C.greenPale}; }
+        .chip.sel { border-color:${C.green}; background:${C.greenPale}; color:${C.green}; box-shadow:0 0 0 2px ${C.greenPale}; }
         .chip-sm { padding:8px 12px; font-size:12px; }
-        .btn {
-          width:100%; padding:14px; border:none; border-radius:12px;
-          background:var(--amber); color:var(--bg); font-family:'Outfit',sans-serif;
-          font-size:15px; font-weight:700; cursor:pointer; letter-spacing:.5px; transition:all .15s;
-        }
+        .btn { width:100%; padding:14px; border:none; border-radius:12px; background:${C.green}; color:#fff; font-family:'Outfit',sans-serif; font-size:15px; font-weight:700; cursor:pointer; letter-spacing:.5px; transition:all .15s; box-shadow:0 2px 8px rgba(74,139,63,.25); }
         .btn:hover { filter:brightness(1.08); }
-        .btn:disabled { opacity:.25; cursor:not-allowed; }
-        .btn-ghost {
-          padding:10px 16px; border:1px solid var(--border); border-radius:10px;
-          background:transparent; color:var(--dim); font-family:inherit; font-size:13px; cursor:pointer;
-        }
-        .btn-ghost:hover { border-color:var(--amber); color:var(--amber); }
+        .btn:disabled { opacity:.3; cursor:not-allowed; box-shadow:none; }
+        .btn-ghost { padding:10px 16px; border:1px solid ${C.border}; border-radius:10px; background:#fff; color:${C.dim}; font-family:inherit; font-size:13px; cursor:pointer; }
+        .btn-ghost:hover { border-color:${C.green}; color:${C.green}; }
         .pill-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
-        .pill {
-          padding:5px 12px; border-radius:20px; font-size:11px; font-weight:500; cursor:pointer;
-          border:1px solid var(--border); background:transparent; color:var(--dim); font-family:inherit;
-          letter-spacing:.4px; transition:all .15s;
-        }
-        .pill.active { background:var(--amber); color:var(--bg); border-color:var(--amber); font-weight:700; }
-        .pill.done { background:var(--s2); color:var(--green); border-color:var(--green); }
-
-        .swatch { width:14px; height:14px; border-radius:4px; flex-shrink:0; border:1px solid rgba(255,255,255,.08); }
+        .pill { padding:5px 12px; border-radius:20px; font-size:11px; font-weight:500; cursor:pointer; border:1px solid ${C.border}; background:#fff; color:${C.dim}; font-family:inherit; letter-spacing:.4px; transition:all .15s; }
+        .pill.active { background:${C.green}; color:#fff; border-color:${C.green}; font-weight:700; }
+        .pill.done { background:${C.greenPale}; color:${C.success}; border-color:${C.success}; }
+        .swatch { width:14px; height:14px; border-radius:4px; flex-shrink:0; border:1px solid rgba(0,0,0,.08); }
         .photo-container { position:relative; width:100%; border-radius:10px; overflow:hidden; touch-action:none; user-select:none; }
-        .fill-line {
-          position:absolute; left:0; right:0; height:3px; background:var(--amber);
-          box-shadow:0 0 8px var(--amber); pointer-events:none; z-index:2;
-        }
-        .fill-label {
-          position:absolute; right:8px; transform:translateY(-50%); background:var(--amber);
-          color:var(--bg); font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px;
-          z-index:3; pointer-events:none;
-        }
-        .fill-overlay {
-          position:absolute; left:0; right:0; bottom:0; z-index:1; pointer-events:none; opacity:.35;
-        }
-        .suggestion-bar {
-          background:var(--blue); color:#fff; padding:10px 14px; border-radius:10px;
-          font-size:12px; display:flex; justify-content:space-between; align-items:center;
-          margin-bottom:12px; cursor:pointer; animation:pulseAmber 2s ease infinite;
-        }
-        .breakdown-row {
-          display:flex; justify-content:space-between; padding:6px 0;
-          border-bottom:1px solid var(--border); font-size:13px;
-        }
+        .fill-line { position:absolute; left:0; right:0; height:3px; background:${C.green}; box-shadow:0 0 8px ${C.greenLight}; pointer-events:none; z-index:2; }
+        .fill-label { position:absolute; right:8px; transform:translateY(-50%); background:${C.green}; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; z-index:3; pointer-events:none; }
+        .fill-overlay { position:absolute; left:0; right:0; bottom:0; z-index:1; pointer-events:none; opacity:.3; }
+        .suggestion-bar { background:${C.blue}; color:#fff; padding:10px 14px; border-radius:10px; font-size:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; cursor:pointer; }
+        .ai-bar { background:${C.bluePale}; border:1px solid ${C.blue}; color:${C.text}; padding:12px 14px; border-radius:10px; font-size:12px; margin-bottom:12px; }
+        .ai-bar-title { font-weight:700; font-size:12px; color:${C.blue}; display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+        .breakdown-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid ${C.border}; font-size:13px; }
         .breakdown-row:last-child { border:none; }
-        .conversion-box {
-          background:var(--s2); padding:12px; border-radius:8px; text-align:center;
-        }
+        .conversion-box { background:${C.surface2}; padding:12px; border-radius:8px; text-align:center; }
+        .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; }
+        .ai-badge { display:inline-flex; align-items:center; gap:4px; background:${C.blue}; color:#fff; font-size:9px; font-weight:700; padding:2px 7px; border-radius:4px; letter-spacing:.5px; }
+        .mfg-btn { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:10px; border:1px solid ${C.border}; background:#fff; cursor:pointer; font-family:inherit; width:100%; text-align:left; transition:all .15s; font-size:13px; color:${C.text}; }
+        .mfg-btn:hover { border-color:${C.green}; background:${C.greenPale}; }
+        .mfg-btn.open { border-color:${C.green}; background:${C.greenPale}; }
+        .mfg-models { padding:0 0 6px 28px; }
       `}</style>
 
-      {/* ─── HEADER ──── */}
-      <div style={{ padding:"14px 20px 10px", borderBottom:`1px solid var(--border)`, background:"var(--s1)" }}>
+      {/* HEADER */}
+      <div style={{ padding:"14px 20px 10px", borderBottom:`1px solid ${C.border}`, background:C.surface }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
           <div>
-            <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:22, fontWeight:900, letterSpacing:-1, display:"flex", alignItems:"center", gap:8 }}>
-              <svg width="28" height="22" viewBox="0 0 28 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="9" y="2" width="17" height="11" rx="1.5" stroke="var(--amber)" strokeWidth="1.8" fill="var(--amber)" fillOpacity=".15"/>
-                <rect x="2" y="6" width="8" height="7" rx="1.5" stroke="var(--amber)" strokeWidth="1.5" fill="none"/>
-                <rect x="3.5" y="7.5" width="4" height="3" rx="1" fill="var(--amber)" fillOpacity=".3"/>
-                <circle cx="6" cy="17" r="3" stroke="var(--amber)" strokeWidth="1.5" fill="var(--s1)"/>
-                <circle cx="20" cy="17" r="3" stroke="var(--amber)" strokeWidth="1.5" fill="var(--s1)"/>
-                <circle cx="14" cy="17" r="3" stroke="var(--amber)" strokeWidth="1.5" fill="var(--s1)"/>
-                <line x1="2" y1="13" x2="26" y2="13" stroke="var(--amber)" strokeWidth="1.2"/>
-                <text x="17.5" y="10" textAnchor="middle" fill="var(--amber)" fontSize="7" fontWeight="bold" fontFamily="monospace">T</text>
+            <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:22, fontWeight:900, letterSpacing:-1, display:"flex", alignItems:"center", gap:8, color:C.dark }}>
+              <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="15" cy="12" r="10" fill="#5B7DB1" stroke="#2D3B2D" strokeWidth="1.2"/>
+                <path d="M6 14 Q8 8 12 6 Q15 5 18 6 Q16 10 13 9 Q10 8 8 12 Q7 14 6 14 Z" fill="#6BBF59"/>
+                <path d="M20 7 Q22 9 22 12 Q21 14 19 15 Q18 12 20 10 Z" fill="#6BBF59"/>
+                <path d="M9 16 Q12 18 16 17 Q19 16 21 17 Q18 20 14 20 Q10 19 9 16 Z" fill="#6BBF59"/>
+                <path d="M7 20 C9 18 12 23 15 24 C18 23 21 18 23 20" stroke="#4A8B3F" strokeWidth="2.2" fill="#6BBF59" fillOpacity=".4" strokeLinecap="round"/>
+                <path d="M10 22 C12 21 13.5 25 15 26 C16.5 25 18 21 20 22" stroke="#3D6B3D" strokeWidth="1.6" fill="#4A8B3F" fillOpacity=".3" strokeLinecap="round"/>
+                <path d="M15 23 L15 29" stroke="#2D3B2D" strokeWidth="1.8" strokeLinecap="round"/>
               </svg>
               TRUCKLOAD
             </div>
-            <div style={{ fontSize:10, color:"var(--dim)", letterSpacing:2, fontWeight:300 }}>TRUCK LOAD WEIGHT ESTIMATOR • V1</div>
+            <div style={{ fontSize:10, color:C.dim, letterSpacing:2, fontWeight:300 }}>WEIGHT ESTIMATOR • V2 <span className="ai-badge">AI</span></div>
           </div>
-          {historyCount > 0 && (
-            <div style={{ fontSize:10, color:"var(--dim)", textAlign:"right" }}>
-              <span style={{ color:"var(--green)", fontWeight:600 }}>{historyCount}</span> estimates saved
-            </div>
-          )}
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+            {historyCount > 0 && <div style={{ fontSize:10, color:C.dim }}><span style={{ color:C.success, fontWeight:600 }}>{historyCount}</span> saved</div>}
+            <button className="btn-ghost" style={{ padding:"4px 8px", fontSize:10 }} onClick={() => setShowApiInput(!showApiInput)}>
+              {apiKey ? "🔑 Key Set" : "⚙ API Key"}
+            </button>
+          </div>
         </div>
+        {showApiInput && (
+          <div style={{ marginBottom:10, display:"flex", gap:6 }}>
+            <input type="password" placeholder="OpenAI API Key (sk-...)" defaultValue={apiKey}
+              onKeyDown={e => { if (e.key === "Enter") handleApiKeySave((e.target as HTMLInputElement).value); }}
+              style={{ fontSize:12, padding:"8px 10px", flex:1 }} />
+            <button className="btn-ghost" style={{ padding:"8px 12px", fontSize:11 }}
+              onClick={e => handleApiKeySave((e.currentTarget.previousElementSibling as HTMLInputElement).value)}>Save</button>
+          </div>
+        )}
         <div className="pill-row" style={{ marginBottom:0 }}>
           {STEPS.map((s, i) => (
             <button key={s} className={`pill ${i === step ? "active" : i < step ? "done" : ""}`}
-              onClick={() => { if (i < step) setStep(i); }}>
-              {i < step ? "✓" : ""} {s}
-            </button>
+              onClick={() => { if (i < step) setStep(i); }}>{i < step ? "✓" : ""} {s}</button>
           ))}
         </div>
       </div>
 
       <div style={{ padding:"16px 20px 120px" }}>
 
+        {/* STEP 0: TRUCK */}
         {step === 0 && (
           <div className="fade">
-            <div className="label">Select Truck Profile</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
-              {TRUCK_PROFILES.map((t, i) => (
-                <button key={t.id} className={`chip ${truckIdx === i ? "sel" : ""}`}
-                  onClick={() => handleTruckSelect(i)}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontWeight:600, color: truckIdx === i ? "var(--amber)" : "var(--text)", fontSize:13 }}>{t.name}</div>
-                    <div style={{ fontSize:10, opacity:.6, marginTop:2 }}>{t.desc}</div>
+            <div className="card" style={{ borderColor: apiKey ? C.blue : C.border }}>
+              <div className="label" style={{ display:"flex", alignItems:"center", gap:6 }}><span className="ai-badge">AI</span> Look Up Any Truck</div>
+              {!apiKey ? <div style={{ fontSize:12, color:C.dim, padding:"8px 0" }}>Set your OpenAI API key above to enable</div> : (
+                <>
+                  <div style={{ display:"flex", gap:6 }}>
+                    <input type="text" placeholder='"Mack Granite tri-axle" or "CAT 740"' value={truckQuery} onChange={e => setTruckQuery(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleTruckLookup(); }} style={{ fontSize:12, flex:1 }} />
+                    <button className="btn" onClick={handleTruckLookup} disabled={truckLookupLoading || !truckQuery.trim()}
+                      style={{ width:"auto", padding:"10px 18px", fontSize:13 }}>{truckLookupLoading ? <span className="spinner" /> : "Search"}</button>
                   </div>
-                  <div style={{ fontSize:11, opacity:.5, textAlign:"right" }}>{t.capacity}</div>
-                </button>
+                  {truckLookupError && <div style={{ color:C.red, fontSize:11, marginTop:8 }}>{truckLookupError}</div>}
+                  {truckLookupResult && (
+                    <div className="ai-bar" style={{ marginTop:10, marginBottom:0 }}>
+                      <div className="ai-bar-title">🤖 {truckLookupResult.name}</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4, fontSize:11 }}>
+                        <span>Length: <strong>{truckLookupResult.length}'</strong></span>
+                        <span>Top Width: <strong>{truckLookupResult.topWidth}'</strong></span>
+                        <span>Bottom Width: <strong>{truckLookupResult.bottomWidth}'</strong></span>
+                        <span>Depth: <strong>{truckLookupResult.depth}'</strong></span>
+                        <span>Shape: <strong>{truckLookupResult.shape}</strong></span>
+                        <span>Capacity: <strong>{truckLookupResult.capacity}</strong></span>
+                      </div>
+                      <div style={{ fontSize:10, marginTop:6, color:C.dim }}>
+                        Confidence: <span style={{ color: truckLookupResult.confidence === "high" ? C.success : truckLookupResult.confidence === "medium" ? C.warn : C.red, fontWeight:600 }}>
+                          {truckLookupResult.confidence}</span> — verify with iPhone Measure if in doubt
+                      </div>
+                      <button className="btn" style={{ fontSize:12, padding:"8px 14px", marginTop:8, width:"auto" }}
+                        onClick={() => { setBedShape(truckLookupResult.shape); setDims({ length: truckLookupResult.length, topWidth: truckLookupResult.topWidth, bottomWidth: truckLookupResult.bottomWidth, depth: truckLookupResult.depth }); setSelMfgIdx(null); setSelModelIdx(null); }}>
+                        ✓ Accept Dimensions
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div style={{ textAlign:"center", fontSize:10, color:C.dim, margin:"12px 0", letterSpacing:1 }}>— OR SELECT FROM DATABASE ({TRUCK_MANUFACTURERS.reduce((s, m) => s + m.models.length, 0)} trucks) —</div>
+
+            <div className="label">Select Manufacturer → Model</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:16 }}>
+              {TRUCK_MANUFACTURERS.map((mfg, mIdx) => (
+                <div key={mfg.id}>
+                  <button className={`mfg-btn ${selMfgIdx === mIdx ? "open" : ""}`}
+                    onClick={() => setSelMfgIdx(selMfgIdx === mIdx ? null : mIdx)}>
+                    <img src={mfg.logo} alt={mfg.name} style={{ width:24, height:24, borderRadius:4, objectFit:"contain", background:"#fff" }} onError={(e:any) => { e.target.style.display='none'; }} />
+                    <div style={{ flex:1 }}><div style={{ fontWeight:700 }}>{mfg.name}</div><div style={{ fontSize:10, color:C.dim }}>{mfg.models.length} models</div></div>
+                    <span style={{ fontSize:12, color:C.dim }}>{selMfgIdx === mIdx ? "▲" : "▼"}</span>
+                  </button>
+                  {selMfgIdx === mIdx && (
+                    <div className="mfg-models fade">
+                      {mfg.models.map((model, mi) => {
+                        const isSel = selMfgIdx === mIdx && selModelIdx === mi;
+                        return (
+                          <button key={model.id} className={`chip ${isSel ? "sel" : ""}`} onClick={() => handleModelSelect(mIdx, mi)} style={{ marginTop:4 }}>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontWeight:600, color: isSel ? C.green : C.text, fontSize:12 }}>{model.name}</div>
+                              <div style={{ fontSize:10, color:C.dim, marginTop:1 }}>{model.axle} • {model.shape}</div>
+                            </div>
+                            <div style={{ fontSize:11, color:C.dim, textAlign:"right" }}>{model.capacity}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
 
             <div className="card">
               <div className="label">Bed Shape</div>
               <div style={{ display:"flex", gap:8 }}>
-                {["rectangular", "trapezoid"].map(s => (
-                  <button key={s} className={`chip chip-sm ${bedShape === s ? "sel" : ""}`}
-                    onClick={() => setBedShape(s)} style={{ flex:1, justifyContent:"center" }}>
+                {(["rectangular", "trapezoid"] as const).map(s => (
+                  <button key={s} className={`chip chip-sm ${bedShape === s ? "sel" : ""}`} onClick={() => setBedShape(s)} style={{ flex:1, justifyContent:"center" }}>
                     <span style={{ fontWeight:600, textTransform:"capitalize" }}>{s}</span>
                   </button>
                 ))}
               </div>
               <svg viewBox="0 0 200 70" style={{ width:"100%", height:55, marginTop:10 }}>
-                {bedShape === "rectangular" ? (
-                  <rect x="30" y="10" width="140" height="50" rx="2" fill="none"
-                    stroke="var(--amber)" strokeWidth="2" opacity=".6" />
-                ) : (
-                  <polygon points="45,60 20,10 180,10 155,60" fill="none"
-                    stroke="var(--amber)" strokeWidth="2" opacity=".6" />
-                )}
-                <text x="100" y="40" textAnchor="middle" fill="var(--dim)" fontSize="9" fontFamily="monospace">
-                  {bedShape === "trapezoid" ? "Top wider than bottom" : "Equal top & bottom"}
-                </text>
+                {bedShape === "rectangular"
+                  ? <rect x="30" y="10" width="140" height="50" rx="2" fill="none" stroke={C.green} strokeWidth="2" opacity=".6" />
+                  : <polygon points="45,60 20,10 180,10 155,60" fill="none" stroke={C.green} strokeWidth="2" opacity=".6" />}
+                <text x="100" y="40" textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="monospace">{bedShape === "trapezoid" ? "Top wider than bottom" : "Equal top & bottom"}</text>
               </svg>
             </div>
 
             <div className="card">
-              <div className="label">Bed Dimensions (feet) — from Apple Measure App</div>
+              <div className="label">Bed Dimensions (feet) — verify with iPhone Measure App</div>
               <div style={{ display:"grid", gridTemplateColumns: bedShape === "trapezoid" ? "1fr 1fr" : "1fr 1fr 1fr", gap:10, marginTop:4 }}>
-                <div>
-                  <div style={{ fontSize:10, color:"var(--dim)", marginBottom:4 }}>Length</div>
-                  <input type="number" step="0.5" min="0" max="50" value={dims.length || ""}
-                    onChange={e => { setDims({...dims, length:parseFloat(e.target.value)||0}); setTruckIdx(0); }}
-                    placeholder="0" />
-                </div>
-                <div>
-                  <div style={{ fontSize:10, color:"var(--dim)", marginBottom:4 }}>
-                    {bedShape === "trapezoid" ? "Top Width" : "Width"}
-                  </div>
-                  <input type="number" step="0.5" min="0" max="20" value={dims.topWidth || ""}
-                    onChange={e => {
-                      const v = parseFloat(e.target.value)||0;
-                      setDims({...dims, topWidth:v, ...(bedShape==="rectangular"?{bottomWidth:v}:{})});
-                      setTruckIdx(0);
-                    }} placeholder="0" />
-                </div>
-                {bedShape === "trapezoid" && (
-                  <div>
-                    <div style={{ fontSize:10, color:"var(--dim)", marginBottom:4 }}>Bottom Width</div>
-                    <input type="number" step="0.5" min="0" max="20" value={dims.bottomWidth || ""}
-                      onChange={e => { setDims({...dims, bottomWidth:parseFloat(e.target.value)||0}); setTruckIdx(0); }}
-                      placeholder="0" />
-                  </div>
-                )}
-                <div>
-                  <div style={{ fontSize:10, color:"var(--dim)", marginBottom:4 }}>Depth</div>
-                  <input type="number" step="0.5" min="0" max="10" value={dims.depth || ""}
-                    onChange={e => { setDims({...dims, depth:parseFloat(e.target.value)||0}); setTruckIdx(0); }}
-                    placeholder="0" />
-                </div>
+                <div><div style={{ fontSize:10, color:C.dim, marginBottom:4 }}>Length</div>
+                  <input type="number" step="0.5" min="0" max="50" value={dims.length || ""} onChange={e => { setDims({...dims, length:parseFloat(e.target.value)||0}); setSelMfgIdx(null); setSelModelIdx(null); }} placeholder="0" /></div>
+                <div><div style={{ fontSize:10, color:C.dim, marginBottom:4 }}>{bedShape === "trapezoid" ? "Top Width" : "Width"}</div>
+                  <input type="number" step="0.5" min="0" max="20" value={dims.topWidth || ""} onChange={e => { const v = parseFloat(e.target.value)||0; setDims({...dims, topWidth:v, ...(bedShape==="rectangular"?{bottomWidth:v}:{})}); setSelMfgIdx(null); setSelModelIdx(null); }} placeholder="0" /></div>
+                {bedShape === "trapezoid" && <div><div style={{ fontSize:10, color:C.dim, marginBottom:4 }}>Bottom Width</div>
+                  <input type="number" step="0.5" min="0" max="20" value={dims.bottomWidth || ""} onChange={e => { setDims({...dims, bottomWidth:parseFloat(e.target.value)||0}); setSelMfgIdx(null); setSelModelIdx(null); }} placeholder="0" /></div>}
+                <div><div style={{ fontSize:10, color:C.dim, marginBottom:4 }}>Depth</div>
+                  <input type="number" step="0.5" min="0" max="10" value={dims.depth || ""} onChange={e => { setDims({...dims, depth:parseFloat(e.target.value)||0}); setSelMfgIdx(null); setSelModelIdx(null); }} placeholder="0" /></div>
               </div>
               <div style={{ marginTop:14, display:"flex", justifyContent:"space-between", fontSize:13 }}>
-                <span style={{ color:"var(--dim)" }}>Bed Volume</span>
-                <span style={{ color:"var(--amber)", fontWeight:700, fontFamily:"'Outfit',sans-serif", fontSize:16 }}>
-                  {bedVolumeYd3.toFixed(1)} yd³
-                </span>
+                <span style={{ color:C.dim }}>Bed Volume</span>
+                <span style={{ color:C.green, fontWeight:700, fontFamily:"'Outfit',sans-serif", fontSize:16 }}>{bedVolumeYd3.toFixed(1)} yd³</span>
               </div>
               {bedShape === "trapezoid" && dims.topWidth > 0 && dims.bottomWidth > 0 && (
-                <div style={{ fontSize:10, color:"var(--dim)", marginTop:4 }}>
-                  Trapezoid correction: {((1 - dims.bottomWidth/dims.topWidth) * 100).toFixed(0)}% narrower at bottom
-                </div>
+                <div style={{ fontSize:10, color:C.dim, marginTop:4 }}>Trapezoid correction: {((1 - dims.bottomWidth/dims.topWidth) * 100).toFixed(0)}% narrower at bottom</div>
               )}
             </div>
 
-            <div className="card" style={{ padding:8 }}>
-              <svg viewBox="0 0 320 90" style={{ width:"100%", height:75 }}>
-                <rect x="15" y="38" width="45" height="35" rx="4" fill="var(--s2)" stroke="var(--border)" strokeWidth="1.5" />
-                <rect x="20" y="42" width="18" height="14" rx="2" fill="var(--s3)" opacity=".5" />
-                <text x="30" y="66" fill="var(--dim)" fontSize="7" fontFamily="monospace" textAnchor="middle">CAB</text>
-                {bedShape === "rectangular" ? (
-                  <rect x="65" y="18" width={Math.min(220, Math.max(60, dims.length*12))}
-                    height={Math.min(55, Math.max(20, dims.depth*14))}
-                    rx="2" fill="none" stroke="var(--amber)" strokeWidth="2" strokeDasharray="5 3" />
-                ) : (
-                  <polygon points={`
-                    ${65 + Math.min(55, Math.max(20, dims.depth*14)) * 0.15},${18 + Math.min(55, Math.max(20, dims.depth*14))}
-                    65,18
-                    ${65 + Math.min(220, Math.max(60, dims.length*12))},18
-                    ${65 + Math.min(220, Math.max(60, dims.length*12)) - Math.min(55, Math.max(20, dims.depth*14)) * 0.15},${18 + Math.min(55, Math.max(20, dims.depth*14))}
-                  `} fill="none" stroke="var(--amber)" strokeWidth="2" strokeDasharray="5 3" />
-                )}
-                <circle cx="50" cy="78" r="8" fill="var(--s2)" stroke="var(--border)" strokeWidth="2" />
-                <circle cx={65 + Math.min(220, Math.max(60, dims.length*12)) - 25} cy="78" r="8" fill="var(--s2)" stroke="var(--border)" strokeWidth="2" />
-                <circle cx={65 + Math.min(220, Math.max(60, dims.length*12)) - 45} cy="78" r="8" fill="var(--s2)" stroke="var(--border)" strokeWidth="2" />
-                <text x={65 + Math.min(220, Math.max(60, dims.length*12))/2}
-                  y={18 + Math.min(55, Math.max(20, dims.depth*14))/2 + 3}
-                  textAnchor="middle" fill="var(--amber)" fontSize="9" fontFamily="monospace" opacity=".7">
-                  {dims.length}' × {dims.topWidth}'{bedShape==="trapezoid" ? `/${dims.bottomWidth}'` : ""} × {dims.depth}'
-                </text>
-              </svg>
-            </div>
-
-            <button className="btn" onClick={() => setStep(1)} disabled={!canProceed[0]}>
-              NEXT → SELECT MATERIAL
-            </button>
+            <button className="btn" onClick={() => setStep(1)} disabled={!canProceed[0]}>NEXT → SELECT MATERIAL</button>
           </div>
         )}
 
+        {/* STEP 1: MATERIAL */}
         {step === 1 && (
           <div className="fade">
             <div className="label">Material Type</div>
+            {photoAnalysis?.materialGuess && materialIdx === null && (
+              <div className="ai-bar" style={{ marginBottom:10 }}>
+                <div className="ai-bar-title">🤖 AI detected: {photoAnalysis.materialGuess}</div>
+                <div style={{ fontSize:11, color:C.dim }}>Select the matching material below</div>
+              </div>
+            )}
             <div className="pill-row">
-              {categories.map(c => (
-                <button key={c} className={`pill ${materialFilter === c ? "active" : ""}`}
-                  onClick={() => setMaterialFilter(c)}>{c}</button>
-              ))}
+              {categories.map(c => <button key={c} className={`pill ${materialFilter === c ? "active" : ""}`} onClick={() => setMaterialFilter(c)}>{c}</button>)}
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-              {filteredMaterials.map((m) => {
-                const origIdx = MATERIALS.indexOf(m);
+              {filteredMaterials.map(m => {
+                const oi = MATERIALS.indexOf(m);
                 return (
-                  <button key={m.id} className={`chip ${materialIdx === origIdx ? "sel" : ""}`}
-                    onClick={() => setMaterialIdx(origIdx)}>
+                  <button key={m.id} className={`chip ${materialIdx === oi ? "sel" : ""}`} onClick={() => setMaterialIdx(oi)}>
                     <div className="swatch" style={{ background:m.color }} />
-                    <div style={{ flex:1 }}>
-                      <span style={{ fontWeight:600, color: materialIdx === origIdx ? "var(--amber)" : "var(--text)" }}>{m.name}</span>
-                      <span style={{ fontSize:10, color:"var(--dim)", marginLeft:8 }}>{m.cat}</span>
-                    </div>
-                    <span style={{ fontSize:12, fontWeight:500, opacity:.5 }}>{m.density} t/yd³</span>
+                    <div style={{ flex:1 }}><span style={{ fontWeight:600, color: materialIdx === oi ? C.green : C.text }}>{m.name}</span><span style={{ fontSize:10, color:C.dim, marginLeft:8 }}>{m.cat}</span></div>
+                    <span style={{ fontSize:12, fontWeight:500, color:C.dim }}>{m.density} t/yd³</span>
                   </button>
                 );
               })}
             </div>
             <div style={{ display:"flex", gap:8, marginTop:16 }}>
               <button className="btn-ghost" onClick={() => setStep(0)}>← Back</button>
-              <button className="btn" style={{ flex:1 }} onClick={() => setStep(2)} disabled={!canProceed[1]}>
-                NEXT → MOISTURE
-              </button>
+              <button className="btn" style={{ flex:1 }} onClick={() => setStep(2)} disabled={!canProceed[1]}>NEXT → MOISTURE</button>
             </div>
           </div>
         )}
 
+        {/* STEP 2: MOISTURE */}
         {step === 2 && (
           <div className="fade">
             <div className="label">Moisture Condition</div>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {MOISTURE_LEVELS.map((m, i) => (
-                <button key={m.id} className={`chip ${moistureIdx === i ? "sel" : ""}`}
-                  onClick={() => setMoistureIdx(i)}
-                  style={{ padding:"14px 16px" }}>
+                <button key={m.id} className={`chip ${moistureIdx === i ? "sel" : ""}`} onClick={() => setMoistureIdx(i)} style={{ padding:"14px 16px" }}>
                   <span style={{ fontSize:24 }}>{m.icon}</span>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontWeight:600, fontSize:15, color: moistureIdx === i ? "var(--amber)" : "var(--text)" }}>{m.label}</div>
-                    <div style={{ fontSize:11, opacity:.5, marginTop:2 }}>{m.desc}</div>
-                  </div>
-                  <span style={{ fontSize:13, fontWeight:600, opacity:.5 }}>×{m.factor}</span>
+                  <div style={{ flex:1 }}><div style={{ fontWeight:600, fontSize:15, color: moistureIdx === i ? C.green : C.text }}>{m.label}</div><div style={{ fontSize:11, color:C.dim, marginTop:2 }}>{m.desc}</div></div>
+                  <span style={{ fontSize:13, fontWeight:600, color:C.dim }}>×{m.factor}</span>
                 </button>
               ))}
             </div>
             <div style={{ display:"flex", gap:8, marginTop:16 }}>
               <button className="btn-ghost" onClick={() => setStep(1)}>← Back</button>
-              <button className="btn" style={{ flex:1 }} onClick={() => setStep(3)}>
-                NEXT → ESTIMATE LOAD
-              </button>
+              <button className="btn" style={{ flex:1 }} onClick={() => setStep(3)}>NEXT → ESTIMATE LOAD</button>
             </div>
           </div>
         )}
 
+        {/* STEP 3: LOAD */}
         {step === 3 && (
           <div className="fade">
             {suggestion && (
-              <div className="suggestion-bar" onClick={applySuggestion} style={{ boxShadow:"none", animation:"none" }}>
-                <div>
-                  <div style={{ fontWeight:600 }}>💡 Based on {suggestion.count} past estimates</div>
-                  <div style={{ fontSize:10, opacity:.8, marginTop:2 }}>
-                    Fill: {suggestion.fillPct}% • Heap: {HEAP_PROFILES.find(h=>h.id===suggestion.heapId)?.label}
-                  </div>
-                </div>
+              <div className="suggestion-bar" onClick={applySuggestion}>
+                <div><div style={{ fontWeight:600 }}>💡 Based on {suggestion.count} past estimates</div>
+                  <div style={{ fontSize:10, opacity:.8, marginTop:2 }}>Fill: {suggestion.fillPct}% • Heap: {HEAP_PROFILES.find(h=>h.id===suggestion.heapId)?.label}</div></div>
                 <span style={{ fontSize:11, fontWeight:700, background:"rgba(255,255,255,.2)", padding:"4px 10px", borderRadius:6 }}>APPLY</span>
               </div>
             )}
-
             <div className="card">
               <div className="label">Reference Photo — drag line to fill level</div>
               {photo ? (
-                <div className="photo-container" ref={photoContainerRef}
-                  onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
-                  style={{ height:240 }}>
-                  <img src={photo} alt="Load" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-                  <div className="fill-overlay"
-                    style={{ height:`${fillPct}%`, background: mat?.color || "var(--amber)" }} />
-                  <div className="fill-line" style={{ bottom:`${fillPct}%` }} />
-                  <div className="fill-label" style={{ bottom:`${fillPct}%` }}>{fillPct}%</div>
-                  <button onClick={() => setPhoto(null)} style={{
-                    position:"absolute", top:8, right:8, background:"rgba(0,0,0,.7)",
-                    border:"none", color:"#fff", width:28, height:28, borderRadius:"50%", cursor:"pointer", fontSize:14, zIndex:5,
-                  }}>✕</button>
-                  <div style={{ position:"absolute", top:8, left:8, background:"rgba(0,0,0,.7)",
-                    color:"var(--amber)", fontSize:10, padding:"4px 8px", borderRadius:4, zIndex:5 }}>
-                    ↕ DRAG TO SET FILL
+                <>
+                  <div className="photo-container" ref={photoContainerRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp} style={{ height:240 }}>
+                    <img src={photo} alt="Load" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                    <div className="fill-overlay" style={{ height:`${fillPct}%`, background: mat?.color || C.green }} />
+                    <div className="fill-line" style={{ bottom:`${fillPct}%` }} />
+                    <div className="fill-label" style={{ bottom:`${fillPct}%` }}>{fillPct}%</div>
+                    <button onClick={() => { setPhoto(null); setPhotoAnalysis(null); }} style={{ position:"absolute", top:8, right:8, background:"rgba(0,0,0,.6)", border:"none", color:"#fff", width:28, height:28, borderRadius:"50%", cursor:"pointer", fontSize:14, zIndex:5 }}>✕</button>
+                    <div style={{ position:"absolute", top:8, left:8, background:"rgba(0,0,0,.6)", color:"#fff", fontSize:10, padding:"4px 8px", borderRadius:4, zIndex:5 }}>↕ DRAG TO SET FILL</div>
                   </div>
-                </div>
+                  {apiKey && !photoAnalysis && (
+                    <button className="btn" onClick={handleAnalyzePhoto} disabled={photoAnalyzing} style={{ marginTop:10, background:C.blue }}>
+                      {photoAnalyzing ? <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><span className="spinner" /> Analyzing with GPT-4o...</span> : "🤖 Analyze Photo with AI"}
+                    </button>
+                  )}
+                  {photoAnalysisError && <div style={{ color:C.red, fontSize:11, marginTop:8 }}>{photoAnalysisError}</div>}
+                  {photoAnalysis && (
+                    <div className="ai-bar" style={{ marginTop:10 }}>
+                      <div className="ai-bar-title">🤖 AI Photo Analysis</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4, fontSize:11 }}>
+                        <span>Fill: <strong>{photoAnalysis.fillPercent}%</strong></span><span>Heap: <strong>{photoAnalysis.heapProfile}</strong></span>
+                        <span>Material: <strong>{photoAnalysis.materialGuess}</strong></span><span>Truck: <strong>{photoAnalysis.truckGuess}</strong></span>
+                      </div>
+                      {photoAnalysis.notes && <div style={{ fontSize:10, color:C.dim, marginTop:6, fontStyle:"italic" }}>"{photoAnalysis.notes}"</div>}
+                      <div style={{ display:"flex", gap:6, marginTop:8 }}>
+                        <button className="btn" style={{ fontSize:12, padding:"8px 14px" }} onClick={applyPhotoAnalysis}>✓ Apply AI Estimates</button>
+                        <button className="btn-ghost" style={{ fontSize:11 }} onClick={() => setPhotoAnalysis(null)}>Dismiss</button>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
-                <button onClick={() => fileRef.current?.click()} style={{
-                  width:"100%", padding:"32px 16px", border:"2px dashed var(--border)",
-                  borderRadius:10, background:"transparent", color:"var(--dim)",
-                  cursor:"pointer", fontFamily:"inherit", fontSize:13,
-                }}>
+                <button onClick={() => fileRef.current?.click()} style={{ width:"100%", padding:"32px 16px", border:`2px dashed ${C.border}`, borderRadius:10, background:"transparent", color:C.dim, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
                   📸 Tap to photograph the loaded truck
-                  <div style={{ fontSize:10, marginTop:4, opacity:.5 }}>Or use slider below without a photo</div>
+                  <div style={{ fontSize:10, marginTop:4, opacity:.5 }}>{apiKey ? "AI will analyze fill level, material & heap" : "Or use slider below"}</div>
                 </button>
               )}
-              <input ref={fileRef} type="file" accept="image/*" capture="environment"
-                onChange={handlePhoto} style={{ display:"none" }} />
+              <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display:"none" }} />
             </div>
 
             <div className="card">
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                 <div className="label" style={{ margin:0 }}>Fill Level</div>
-                <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:28, fontWeight:900, color:"var(--amber)" }}>{fillPct}%</div>
+                <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:28, fontWeight:900, color:C.green }}>{fillPct}%</div>
               </div>
-              <input type="range" min="10" max="100" value={fillPct}
-                onChange={e => setFillPct(parseInt(e.target.value))} style={{ marginTop:8 }} />
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:"var(--dim)", marginTop:4, letterSpacing:.5 }}>
+              <input type="range" min="10" max="100" value={fillPct} onChange={e => setFillPct(parseInt(e.target.value))} style={{ marginTop:8 }} />
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:C.dim, marginTop:4, letterSpacing:.5 }}>
                 <span>10% QUARTER</span><span>50% HALF</span><span>75% ¾</span><span>100% FULL</span>
               </div>
               <svg viewBox="0 0 220 55" style={{ width:"100%", height:45, marginTop:8 }}>
-                {bedShape === "trapezoid" ? (
-                  <>
-                    <polygon points="25,50 10,5 210,5 195,50" fill="none" stroke="var(--border)" strokeWidth="1.5" />
-                    <clipPath id="bedClip"><polygon points="25,50 10,5 210,5 195,50" /></clipPath>
-                    <rect x="0" y={50 - fillPct*.45} width="220" height={fillPct*.45} fill={mat?.color||"var(--amber)"} opacity=".35" clipPath="url(#bedClip)" />
-                  </>
-                ) : (
-                  <>
-                    <rect x="10" y="5" width="200" height="45" rx="2" fill="none" stroke="var(--border)" strokeWidth="1.5" />
-                    <rect x="11" y={5+45*(1-fillPct/100)} width="198" height={45*fillPct/100} fill={mat?.color||"var(--amber)"} opacity=".35" rx="1" />
-                  </>
-                )}
-                {heapIdx >= 2 && (
-                  <polygon
-                    points={bedShape === "trapezoid"
-                      ? `25,${50 - fillPct*.45} 110,${50 - fillPct*.45 - heapIdx*5} 195,${50 - fillPct*.45}`
-                      : `11,${5+45*(1-fillPct/100)} 110,${5+45*(1-fillPct/100)-heapIdx*5} 209,${5+45*(1-fillPct/100)}`
-                    }
-                    fill={mat?.color||"var(--amber)"} opacity=".25" />
-                )}
+                {bedShape === "trapezoid" ? (<>
+                  <polygon points="25,50 10,5 210,5 195,50" fill="none" stroke={C.border} strokeWidth="1.5" />
+                  <clipPath id="bedClip"><polygon points="25,50 10,5 210,5 195,50" /></clipPath>
+                  <rect x="0" y={50 - fillPct*.45} width="220" height={fillPct*.45} fill={mat?.color||C.green} opacity=".35" clipPath="url(#bedClip)" />
+                </>) : (<>
+                  <rect x="10" y="5" width="200" height="45" rx="2" fill="none" stroke={C.border} strokeWidth="1.5" />
+                  <rect x="11" y={5+45*(1-fillPct/100)} width="198" height={45*fillPct/100} fill={mat?.color||C.green} opacity=".35" rx="1" />
+                </>)}
+                {heapIdx >= 2 && <polygon points={bedShape === "trapezoid"
+                  ? `25,${50 - fillPct*.45} 110,${50 - fillPct*.45 - heapIdx*5} 195,${50 - fillPct*.45}`
+                  : `11,${5+45*(1-fillPct/100)} 110,${5+45*(1-fillPct/100)-heapIdx*5} 209,${5+45*(1-fillPct/100)}`} fill={mat?.color||C.green} opacity=".25" />}
               </svg>
             </div>
 
@@ -594,11 +662,8 @@ export default function LoadWeighV1() {
               <div className="label">Heap Profile</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
                 {HEAP_PROFILES.map((h, i) => (
-                  <button key={h.id} className={`chip chip-sm ${heapIdx === i ? "sel" : ""}`}
-                    onClick={() => setHeapIdx(i)}
-                    style={{ flexDirection:"column", alignItems:"flex-start" }}>
-                    <span style={{ fontWeight:600 }}>{h.label}</span>
-                    <span style={{ fontSize:10, opacity:.5 }}>{h.desc} (×{h.factor})</span>
+                  <button key={h.id} className={`chip chip-sm ${heapIdx === i ? "sel" : ""}`} onClick={() => setHeapIdx(i)} style={{ flexDirection:"column", alignItems:"flex-start" }}>
+                    <span style={{ fontWeight:600 }}>{h.label}</span><span style={{ fontSize:10, color:C.dim }}>{h.desc} (×{h.factor})</span>
                   </button>
                 ))}
               </div>
@@ -606,81 +671,64 @@ export default function LoadWeighV1() {
 
             <div style={{ display:"flex", gap:8, marginTop:4 }}>
               <button className="btn-ghost" onClick={() => setStep(2)}>← Back</button>
-              <button className="btn" style={{ flex:1 }} onClick={() => { setStep(4); setSaved(false); }}>
-                CALCULATE →
-              </button>
+              <button className="btn" style={{ flex:1 }} onClick={() => { setStep(4); setSaved(false); }}>CALCULATE →</button>
             </div>
           </div>
         )}
 
+        {/* STEP 4: RESULT */}
         {step === 4 && mat && (
           <div className="fade">
-            <div className="card" style={{
-              textAlign:"center", borderColor:"var(--amber)", padding:28,
-              background:"linear-gradient(180deg, #1a1608 0%, var(--s1) 100%)",
-            }}>
-              <div style={{ fontSize:10, color:"var(--dim)", letterSpacing:3 }}>ESTIMATED WEIGHT</div>
-              <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:56, fontWeight:900, color:"var(--amber)", lineHeight:1, marginTop:8 }}>
-                {estimatedWeight.toFixed(1)}
-              </div>
-              <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:18, color:"var(--dim)", fontWeight:600 }}>TONS</div>
-              <div style={{
-                marginTop:14, fontSize:13, color:"var(--text)",
-                background:"var(--s2)", padding:"10px 18px", borderRadius:10, display:"inline-block",
-              }}>
+            <div className="card" style={{ textAlign:"center", borderColor:C.green, padding:28, background:`linear-gradient(180deg, ${C.greenPale} 0%, #fff 100%)` }}>
+              <div style={{ fontSize:10, color:C.dim, letterSpacing:3 }}>ESTIMATED WEIGHT</div>
+              <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:56, fontWeight:900, color:C.green, lineHeight:1, marginTop:8 }}>{estimatedWeight.toFixed(1)}</div>
+              <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:18, color:C.dim, fontWeight:600 }}>TONS</div>
+              <div style={{ marginTop:14, fontSize:13, color:C.text, background:C.surface2, padding:"10px 18px", borderRadius:10, display:"inline-block" }}>
                 Range: <strong>{rangeLow.toFixed(1)}</strong> – <strong>{rangeHigh.toFixed(1)}</strong> tons
               </div>
-              <div style={{ marginTop:8, fontSize:11, color:"var(--red)", fontWeight:500 }}>
-                ⚠ ±15% estimate — verify on certified scale
-              </div>
+              <div style={{ marginTop:8, fontSize:11, color:C.red, fontWeight:500 }}>⚠ ±15% estimate — verify on certified scale</div>
             </div>
 
+            {photoAnalysis && (
+              <div className="ai-bar">
+                <div className="ai-bar-title">🤖 AI Cross-Check</div>
+                <div style={{ fontSize:11 }}>
+                  AI estimated <strong>{photoAnalysis.fillPercent}%</strong> fill with <strong>{photoAnalysis.heapProfile}</strong> heap
+                  {photoAnalysis.materialGuess && <> • detected <strong>{photoAnalysis.materialGuess}</strong></>}
+                  {Math.abs(photoAnalysis.fillPercent - fillPct) > 15 && (
+                    <div style={{ color:C.warn, marginTop:4, fontWeight:600 }}>⚠ AI fill ({photoAnalysis.fillPercent}%) differs from yours ({fillPct}%) by {Math.abs(photoAnalysis.fillPercent - fillPct)}%</div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <button className={saved ? "btn-ghost" : "btn"} onClick={handleSave} disabled={saved}
-              style={{ marginBottom:12, ...(saved ? {width:"100%", borderColor:"var(--green)", color:"var(--green)"} : {}) }}>
-              {saved ? "✓ Saved — improving future suggestions" : "💾 Save Estimate (Improves Suggestions)"}
+              style={{ marginBottom:12, ...(saved ? {width:"100%", borderColor:C.success, color:C.success} : {}) }}>
+              {saved ? "✓ Saved — improving future suggestions" : "💾 Save Estimate"}
             </button>
 
             <div className="card">
               <div className="label">Calculation Breakdown</div>
-              {[
-                ["Truck", TRUCK_PROFILES[truckIdx].name],
-                ["Bed Shape", bedShape.charAt(0).toUpperCase() + bedShape.slice(1)],
+              {[["Truck", truckDisplayName], ["Bed Shape", bedShape.charAt(0).toUpperCase() + bedShape.slice(1)],
                 ["Bed Dimensions", `${dims.length}' × ${dims.topWidth}'${bedShape==="trapezoid"?`/${dims.bottomWidth}'`:""} × ${dims.depth}'`],
-                ["Bed Volume", `${bedVolumeYd3.toFixed(2)} yd³`],
-                ["Fill Level", `${fillPct}%`],
-                ["Heap Factor", `×${heapFactor} (${HEAP_PROFILES[heapIdx].label})`],
-                ["Effective Volume", `${effectiveVolume.toFixed(2)} yd³`],
-                ["Material", mat.name],
-                ["Base Density", `${mat.density} tons/yd³`],
-                ["Moisture", `${MOISTURE_LEVELS[moistureIdx].label} (×${moistureFactor})`],
-                ["Adjusted Density", `${adjustedDensity.toFixed(3)} tons/yd³`],
-              ].map(([k,v]) => (
-                <div key={k} className="breakdown-row">
-                  <span style={{ color:"var(--dim)" }}>{k}</span>
-                  <span style={{ fontWeight:500 }}>{v}</span>
-                </div>
-              ))}
+                ["Bed Volume", `${bedVolumeYd3.toFixed(2)} yd³`], ["Fill Level", `${fillPct}%`],
+                ["Heap Factor", `×${heapFactor} (${HEAP_PROFILES[heapIdx].label})`], ["Effective Volume", `${effectiveVolume.toFixed(2)} yd³`],
+                ["Material", mat.name], ["Base Density", `${mat.density} tons/yd³`],
+                ["Moisture", `${MOISTURE_LEVELS[moistureIdx].label} (×${moistureFactor})`], ["Adjusted Density", `${adjustedDensity.toFixed(3)} tons/yd³`],
+              ].map(([k,v]) => <div key={k} className="breakdown-row"><span style={{ color:C.dim }}>{k}</span><span style={{ fontWeight:500 }}>{v}</span></div>)}
               <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0 0", marginTop:6 }}>
-                <span style={{ color:"var(--amber)", fontWeight:700, fontSize:14 }}>TOTAL WEIGHT</span>
-                <span style={{ color:"var(--amber)", fontWeight:900, fontSize:18, fontFamily:"'Outfit',sans-serif" }}>
-                  {estimatedWeight.toFixed(2)} tons
-                </span>
+                <span style={{ color:C.green, fontWeight:700, fontSize:14 }}>TOTAL WEIGHT</span>
+                <span style={{ color:C.green, fontWeight:900, fontSize:18, fontFamily:"'Outfit',sans-serif" }}>{estimatedWeight.toFixed(2)} tons</span>
               </div>
             </div>
 
             <div className="card">
               <div className="label">Conversions</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                {[
-                  [(estimatedWeight * 2000).toFixed(0), "POUNDS"],
-                  [(estimatedWeight * 0.9072).toFixed(2), "METRIC TONS"],
-                  [(estimatedWeight * 907.2).toFixed(0), "KILOGRAMS"],
-                  [effectiveVolume.toFixed(1), "CUBIC YARDS"],
-                ].map(([val, label]) => (
-                  <div key={label} className="conversion-box">
-                    <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:20, fontWeight:700 }}>{val}</div>
-                    <div style={{ fontSize:9, color:"var(--dim)", letterSpacing:1, marginTop:2 }}>{label}</div>
-                  </div>
+                {[[(estimatedWeight*2000).toFixed(0),"POUNDS"],[(estimatedWeight*0.9072).toFixed(2),"METRIC TONS"],
+                  [(estimatedWeight*907.2).toFixed(0),"KILOGRAMS"],[effectiveVolume.toFixed(1),"CUBIC YARDS"]].map(([v,l]) => (
+                  <div key={l} className="conversion-box"><div style={{ fontFamily:"'Outfit',sans-serif", fontSize:20, fontWeight:700, color:C.text }}>{v}</div>
+                    <div style={{ fontSize:9, color:C.dim, letterSpacing:1, marginTop:2 }}>{l}</div></div>
                 ))}
               </div>
             </div>
@@ -688,32 +736,25 @@ export default function LoadWeighV1() {
             {photo && (
               <div className="card" style={{ padding:8 }}>
                 <img src={photo} alt="Reference" style={{ width:"100%", borderRadius:8, maxHeight:140, objectFit:"cover" }} />
-                <div style={{ fontSize:9, color:"var(--dim)", marginTop:4, textAlign:"center" }}>Reference photo • {new Date().toLocaleDateString()}</div>
+                <div style={{ fontSize:9, color:C.dim, marginTop:4, textAlign:"center" }}>Reference photo • {new Date().toLocaleDateString()}</div>
               </div>
             )}
 
             <div style={{ display:"flex", gap:8, marginTop:8 }}>
               <button className="btn-ghost" onClick={() => setStep(3)}>← Adjust</button>
               <button className="btn" style={{ flex:1 }} onClick={() => {
-                setStep(0); setTruckIdx(0); setMaterialIdx(null); setPhoto(null);
-                setFillPct(85); setHeapIdx(1); setMoistureIdx(0); setSuggestion(null);
-                setDims({ length:0, topWidth:0, bottomWidth:0, depth:0 });
-              }}>
-                NEW ESTIMATE
-              </button>
+                setStep(0); setSelMfgIdx(null); setSelModelIdx(null); setMaterialIdx(null);
+                setPhoto(null); setFillPct(85); setHeapIdx(1); setMoistureIdx(0);
+                setSuggestion(null); setDims({ length:0, topWidth:0, bottomWidth:0, depth:0 });
+                setTruckLookupResult(null); setTruckQuery(""); setPhotoAnalysis(null);
+              }}>NEW ESTIMATE</button>
             </div>
           </div>
         )}
       </div>
 
-      <div style={{
-        position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)",
-        width:"100%", maxWidth:500, padding:"10px 20px 6px",
-        background:"linear-gradient(transparent, var(--bg) 40%)", pointerEvents:"none",
-      }}>
-        <div style={{ fontSize:8, color:"var(--dim)", textAlign:"center", opacity:.5, letterSpacing:1 }}>
-          TRUCKLOAD V1 • HAMPTON ROADS, VA • ESTIMATES ONLY — NOT FOR BILLING
-        </div>
+      <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:500, padding:"10px 20px 6px", background:"linear-gradient(transparent, #fff 40%)", pointerEvents:"none" }}>
+        <div style={{ fontSize:8, color:C.dim, textAlign:"center", opacity:.5, letterSpacing:1 }}>TRUCKLOAD V2 • HAMPTON ROADS, VA • ESTIMATES ONLY — NOT FOR BILLING</div>
       </div>
     </div>
   );
