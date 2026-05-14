@@ -194,17 +194,23 @@ async function lookupTruckDimensions(query: string, apiKey: string) {
   return JSON.parse(data.choices[0].message.content.trim().replace(/```json\n?|```/g, "").trim());
 }
 
-async function analyzeLoadPhoto(base64Image: string, apiKey: string) {
+async function analyzeLoadPhotos(base64Images: string[], apiKey: string) {
+  const imageContent = base64Images.map(img => ({ type: "image_url" as const, image_url: { url: img, detail: "low" as const } }));
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: "gpt-4o", temperature: 0.3, max_tokens: 500,
+      model: "gpt-4o", temperature: 0.3, max_tokens: 600,
       messages: [
-        { role: "system", content: `You analyze loaded dump truck photos. Return JSON only. Format: {"fillPercent":NUMBER_10_to_100,"materialGuess":"material name","heapProfile":"flat|crowned|heaped|maxheap","truckGuess":"truck make/model if visible","notes":"brief observation"}. Return ONLY valid JSON.` },
+        { role: "system", content: `You analyze photos of loaded dump trucks. You may receive 1-3 photos from different angles. Cross-reference all photos to produce the most accurate estimate. Return JSON only. Format:
+{"fillPercent":NUMBER_10_to_100,"materialGuess":"material name","heapProfile":"flat|crowned|heaped|maxheap","truckGuess":"truck make/model if visible","confidence":"high|medium|low","issue":"null or brief description of what's wrong/missing with the photos","betterAngle":"null or what photo angle would improve accuracy","notes":"brief observation"}.
+- confidence: high = clear view of load, material identifiable. medium = partially obscured or ambiguous. low = bad angle, blurry, or not a dump truck.
+- issue: null if photos are fine, otherwise explain the problem (e.g. "Photo is too far away to see material", "Only cab visible, need bed view", "Blurry image").
+- betterAngle: null if not needed, otherwise suggest (e.g. "Take a side view showing the full bed", "Get closer to the material surface").
+Return ONLY valid JSON.` },
         { role: "user", content: [
-          { type: "image_url", image_url: { url: base64Image, detail: "low" } },
-          { type: "text", text: "Analyze this loaded dump truck photo." }
+          ...imageContent,
+          { type: "text", text: `Analyze ${base64Images.length === 1 ? "this" : "these " + base64Images.length} loaded dump truck photo${base64Images.length > 1 ? "s" : ""}. Cross-reference if multiple angles provided.` }
         ]}
       ],
     }),
@@ -261,7 +267,7 @@ export default function LoadWeighV2() {
   const [moistureIdx, setMoistureIdx] = useState(0);
   const [fillPct, setFillPct] = useState(85);
   const [heapIdx, setHeapIdx] = useState(1);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [suggestion, setSuggestion] = useState<any>(null);
   const [saved, setSaved] = useState(false);
@@ -343,13 +349,18 @@ export default function LoadWeighV2() {
 
   const handlePhoto = (e: any) => {
     const file = e.target.files?.[0];
-    if (file) { const r = new FileReader(); r.onload = (ev: any) => { setPhoto(ev.target.result); setPhotoAnalysis(null); setPhotoAnalysisError(""); }; r.readAsDataURL(file); }
+    if (file && photos.length < 3) {
+      const r = new FileReader();
+      r.onload = (ev: any) => { setPhotos(prev => [...prev, ev.target.result]); setPhotoAnalysis(null); setPhotoAnalysisError(""); };
+      r.readAsDataURL(file);
+    }
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const handleAnalyzePhoto = async () => {
-    if (!photo || !apiKey) return;
+    if (photos.length === 0 || !apiKey) return;
     setPhotoAnalyzing(true); setPhotoAnalysisError(""); setPhotoAnalysis(null);
-    try { setPhotoAnalysis(await analyzeLoadPhoto(photo, apiKey)); }
+    try { setPhotoAnalysis(await analyzeLoadPhotos(photos, apiKey)); }
     catch (e: any) { setPhotoAnalysisError(e.message || "Analysis failed"); }
     finally { setPhotoAnalyzing(false); }
   };
@@ -730,35 +741,107 @@ export default function LoadWeighV2() {
               </div>
             )}
             <div className="card">
-              <div className="label">Reference Photo {keyValid && aiPhoto ? "— AI will analyze your photo" : "— drag line to fill level"}</div>
-              {photo ? (
+              <div className="label">
+                {keyValid && aiPhoto
+                  ? `Reference Photos — up to 3 angles (${photos.length}/3)`
+                  : "Reference Photo — drag line to fill level"}
+              </div>
+              {photos.length > 0 ? (
                 <>
-                  <div className="photo-container" ref={photoContainerRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp} style={{ height: 240 }}>
-                    <img src={photo} alt="Load" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    <div className="fill-overlay" style={{ height: `${fillPct}%`, background: mat?.color || C.green }} />
-                    <div className="fill-line" style={{ bottom: `${fillPct}%` }} />
-                    <div className="fill-label" style={{ bottom: `${fillPct}%` }}>{fillPct}%</div>
-                    <button onClick={() => { setPhoto(null); setPhotoAnalysis(null); }} style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,.6)", border: "none", color: "#fff", width: 28, height: 28, borderRadius: "50%", cursor: "pointer", fontSize: 14, zIndex: 5 }}>✕</button>
-                    <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(0,0,0,.6)", color: "#fff", fontSize: 10, padding: "4px 8px", borderRadius: 4, zIndex: 5 }}>↕ DRAG TO SET FILL</div>
+                  {/* Photo thumbnails row */}
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    {photos.map((p, i) => (
+                      <div key={i} style={{ position: "relative", width: photos.length === 1 ? "100%" : `${100 / photos.length}%`, height: photos.length === 1 ? 200 : 90, borderRadius: 8, overflow: "hidden" }}>
+                        <img src={p} alt={`Photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        <button onClick={() => { setPhotos(prev => prev.filter((_, j) => j !== i)); setPhotoAnalysis(null); }} style={{
+                          position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,.6)", border: "none", color: "#fff",
+                          width: 20, height: 20, borderRadius: "50%", cursor: "pointer", fontSize: 11, zIndex: 5,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>✕</button>
+                        {i === 0 && photos.length === 1 && (
+                          <div style={{ position: "absolute", top: 4, left: 4, background: "rgba(0,0,0,.6)", color: "#fff", fontSize: 10, padding: "3px 6px", borderRadius: 4, zIndex: 5 }}>
+                            {keyValid && aiPhoto ? "📸 Main photo" : "↕ DRAG TO SET FILL"}
+                          </div>
+                        )}
+                        {photos.length > 1 && (
+                          <div style={{ position: "absolute", bottom: 4, left: 4, background: "rgba(0,0,0,.6)", color: "#fff", fontSize: 9, padding: "2px 5px", borderRadius: 3 }}>
+                            {i === 0 ? "Side" : i === 1 ? "Top/Front" : "Detail"}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {photos.length < 3 && (
+                      <button onClick={() => fileRef.current?.click()} style={{
+                        width: photos.length === 1 ? 90 : `${100 / (photos.length + 1)}%`, minWidth: 70,
+                        height: photos.length === 1 ? 200 : 90,
+                        border: `2px dashed ${C.border}`, borderRadius: 8, background: "transparent",
+                        color: C.dim, cursor: "pointer", fontFamily: "inherit", fontSize: 11,
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
+                      }}>
+                        <span style={{ fontSize: 20 }}>+</span>
+                        <span>Add angle</span>
+                      </button>
+                    )}
                   </div>
-                  {/* AI Photo Analysis button — only if key valid + toggle on */}
+                  {keyValid && aiPhoto && (
+                    <div style={{ fontSize: 10, color: C.dim, marginBottom: 8 }}>
+                      💡 Multiple angles improve accuracy: side view (fill level), top view (material), front (truck ID)
+                    </div>
+                  )}
+
+                  {/* Fill line on first photo for manual drag */}
+                  {!keyValid || !aiPhoto ? (
+                    <div className="photo-container" ref={photoContainerRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp} style={{ height: 200, marginBottom: 8 }}>
+                      <img src={photos[0]} alt="Load" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      <div className="fill-overlay" style={{ height: `${fillPct}%`, background: mat?.color || C.green }} />
+                      <div className="fill-line" style={{ bottom: `${fillPct}%` }} />
+                      <div className="fill-label" style={{ bottom: `${fillPct}%` }}>{fillPct}%</div>
+                    </div>
+                  ) : null}
+
+                  {/* AI Analyze button */}
                   {keyValid && aiPhoto && !photoAnalysis && (
-                    <button className="btn" onClick={handleAnalyzePhoto} disabled={photoAnalyzing} style={{ marginTop: 10, background: C.blue }}>
-                      {photoAnalyzing ? <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><span className="spinner" /> Analyzing with GPT-4o...</span> : "🤖 Analyze Photo with AI"}
+                    <button className="btn" onClick={handleAnalyzePhoto} disabled={photoAnalyzing} style={{ marginTop: 4, background: C.blue }}>
+                      {photoAnalyzing ? <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><span className="spinner" /> Analyzing {photos.length} photo{photos.length > 1 ? "s" : ""} with GPT-4o...</span>
+                        : `🤖 Analyze ${photos.length} Photo${photos.length > 1 ? "s" : ""} with AI`}
                     </button>
                   )}
                   {photoAnalysisError && <div style={{ color: C.red, fontSize: 11, marginTop: 8 }}>{photoAnalysisError}</div>}
                   {photoAnalysis && (
                     <div className="ai-bar" style={{ marginTop: 10 }}>
-                      <div className="ai-bar-title">🤖 AI Photo Analysis</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: 11 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div className="ai-bar-title" style={{ marginBottom: 0 }}>🤖 AI Photo Analysis</div>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                          background: photoAnalysis.confidence === "high" ? C.greenPale : photoAnalysis.confidence === "medium" ? "#FFF3E0" : "#FFEBEE",
+                          color: photoAnalysis.confidence === "high" ? C.success : photoAnalysis.confidence === "medium" ? C.warn : C.red,
+                        }}>{photoAnalysis.confidence} confidence</span>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: 11, marginTop: 6 }}>
                         <span>Fill: <strong>{photoAnalysis.fillPercent}%</strong></span><span>Heap: <strong>{photoAnalysis.heapProfile}</strong></span>
                         <span>Material: <strong>{photoAnalysis.materialGuess}</strong></span><span>Truck: <strong>{photoAnalysis.truckGuess}</strong></span>
                       </div>
                       {photoAnalysis.notes && <div style={{ fontSize: 10, color: C.dim, marginTop: 6, fontStyle: "italic" }}>"{photoAnalysis.notes}"</div>}
+
+                      {/* Low/medium confidence guidance */}
+                      {(photoAnalysis.issue || photoAnalysis.betterAngle) && (
+                        <div style={{ marginTop: 8, padding: "8px 10px", background: photoAnalysis.confidence === "low" ? "#FFEBEE" : "#FFF8E1", borderRadius: 6, fontSize: 11 }}>
+                          {photoAnalysis.issue && <div style={{ color: photoAnalysis.confidence === "low" ? C.red : C.warn, fontWeight: 600 }}>⚠ {photoAnalysis.issue}</div>}
+                          {photoAnalysis.betterAngle && <div style={{ color: C.dim, marginTop: 2 }}>📸 Tip: {photoAnalysis.betterAngle}</div>}
+                          {photos.length < 3 && (
+                            <button className="btn-ghost" onClick={() => { setPhotoAnalysis(null); fileRef.current?.click(); }}
+                              style={{ marginTop: 6, fontSize: 11, padding: "6px 12px" }}>
+                              + Add another photo and re-analyze
+                            </button>
+                          )}
+                        </div>
+                      )}
+
                       <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                         <button className="btn" style={{ fontSize: 12, padding: "8px 14px" }} onClick={applyPhotoAnalysis}>✓ Apply AI Estimates</button>
-                        <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => setPhotoAnalysis(null)}>Dismiss</button>
+                        <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => setPhotoAnalysis(null)}>
+                          {photoAnalysis.confidence === "low" ? "Retry" : "Dismiss"}
+                        </button>
                       </div>
                     </div>
                   )}
@@ -766,7 +849,7 @@ export default function LoadWeighV2() {
               ) : (
                 <button onClick={() => fileRef.current?.click()} style={{ width: "100%", padding: "32px 16px", border: `2px dashed ${C.border}`, borderRadius: 10, background: "transparent", color: C.dim, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
                   📸 Tap to photograph the loaded truck
-                  <div style={{ fontSize: 10, marginTop: 4, opacity: .5 }}>{keyValid && aiPhoto ? "AI will analyze fill level, material & heap" : "Or use slider below"}</div>
+                  <div style={{ fontSize: 10, marginTop: 4, opacity: .5 }}>{keyValid && aiPhoto ? "AI will analyze fill level, material & heap • add up to 3 angles" : "Or use slider below"}</div>
                 </button>
               )}
               <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: "none" }} />
@@ -871,10 +954,12 @@ export default function LoadWeighV2() {
               </div>
             </div>
 
-            {photo && (
+            {photos.length > 0 && (
               <div className="card" style={{ padding: 8 }}>
-                <img src={photo} alt="Reference" style={{ width: "100%", borderRadius: 8, maxHeight: 140, objectFit: "cover" }} />
-                <div style={{ fontSize: 9, color: C.dim, marginTop: 4, textAlign: "center" }}>Reference photo • {new Date().toLocaleDateString()}</div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {photos.map((p, i) => <img key={i} src={p} alt={`Reference ${i+1}`} style={{ width: `${100/photos.length}%`, borderRadius: 8, maxHeight: 140, objectFit: "cover" }} />)}
+                </div>
+                <div style={{ fontSize: 9, color: C.dim, marginTop: 4, textAlign: "center" }}>{photos.length} reference photo{photos.length > 1 ? "s" : ""} • {new Date().toLocaleDateString()}</div>
               </div>
             )}
 
@@ -882,7 +967,7 @@ export default function LoadWeighV2() {
               <button className="btn-ghost" onClick={() => setStep(3)}>← Adjust</button>
               <button className="btn" style={{ flex: 1 }} onClick={() => {
                 setStep(0); setSelMfgIdx(null); setSelModelIdx(null); setMaterialIdx(null);
-                setPhoto(null); setFillPct(85); setHeapIdx(1); setMoistureIdx(0);
+                setPhotos([]); setFillPct(85); setHeapIdx(1); setMoistureIdx(0);
                 setSuggestion(null); setDims({ length: 0, topWidth: 0, bottomWidth: 0, depth: 0 });
                 setTruckLookupResult(null); setTruckQuery(""); setPhotoAnalysis(null);
               }}>NEW ESTIMATE</button>
